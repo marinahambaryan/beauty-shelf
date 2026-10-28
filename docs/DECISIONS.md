@@ -41,11 +41,13 @@ Trigger `library_items_status_rules`: leaving *Owned* clears usage state; becomi
 ## D10 · Deleting a library item
 Hard delete with cascades: collection/shelf memberships disappear (no broken shelf card), history goes with it, and a personal product with no remaining references is cleaned up. Shopping-list entries survive. The UI must confirm when notes/rating would be lost (Milestone 2).
 
-## D11 · Seed catalog is fictional
-Seven invented brands / 15 products, no images, clearly labelled in `supabase/seed.sql`. Nothing licensed, scraped or impersonating real brands. A `CatalogProvider` interface (`src/data/catalog.ts`) lets a licensed source be added later without touching screens.
+## D11 · Seed catalog uses real products, without images
+Fifteen real, widely sold products from fifteen brands (Charlotte Tilbury, Byredo, Diptyque, Kiehl's, Aesop…), entered by hand as plain facts: brand, product name, category and the shade/size names the brands publish (each checked against a retailer or brand page, 28 Oct 2026). No descriptions of efficacy. **No images are seeded**: brand and retailer product photos are copyrighted, so a product shows a neutral placeholder until it has a photo — the user's own (Milestone 2 upload) or a properly licensed source. Open Beauty Facts (photos under CC BY-SA, attribution required) is the candidate licensed source; its coverage of these brands is unverified. The `CatalogProvider` interface (`src/data/catalog.ts`) lets a source be added without touching screens. Seed UUIDs are stable because the database tests reference them.
+*Reversal:* restore the fictional seed from git history.
 
 ## D12 · Database tests run on plain PostgreSQL
 `supabase/tests/shim/vanilla_postgres_shim.sql` recreates the roles, `auth.uid()` and storage tables the migrations depend on, so `npm run test:db` works in any CI with Postgres 15+. The same tests run unchanged against a local Supabase stack (`SKIP_DB_BUILD=1`). The shim must never be applied to a real project.
 
-## D13 · Fonts and icons
-System serif (Georgia / Android serif) for headlines and system sans for UI for now — no font downloads, no icon library. Tab icons are text glyphs. The final editorial typeface and icon set are a Milestone 5 decision.
+## D13 · Visual design: Direction D, "Apothecary"
+Chosen by the owner from the "Beauty Shelf — UI Directions" canvas (28 Oct 2026), on a white ground. IBM Plex Mono for labels and body, Inter Tight for the big titles (bundled with `@expo-google-fonts`, loaded before first render). No icon library: the tab bar is four mono words with the current one in brackets, drawn by `expo-router/ui` headless tabs on every platform — a deliberate trade of the system tab bar's native look for the design. Products without a photo are neutral containers with a paper label (`src/components/shelf.tsx`), never invented colours. Tokens live in `src/theme/tokens.ts`.
+*Reversal:* swap `src/components/app-tabs.tsx` back to `NativeTabs`; tokens and fonts are isolated in `src/theme/`.

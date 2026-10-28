@@ -1,5 +1,6 @@
 import pg from 'pg';
 
+// Matte Revolution Lipstick in Pillow Talk / Walk of No Shame; Double Wear in 1W2 Sand.
 export const LIP_ROSEWOOD = 'c0000000-0000-4000-8000-000000000101';
 export const LIP_CINEMA_RED = 'c0000000-0000-4000-8000-000000000102';
 export const FOUNDATION_HONEY = 'c0000000-0000-4000-8000-000000000302';

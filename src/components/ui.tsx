@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -7,13 +7,14 @@ import {
   Text,
   TextInput,
   View,
+  type ScrollViewProps,
   type TextInputProps,
   type TextProps,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius, space, touchTarget, type } from '@/theme/tokens';
+import { colors, fonts, radius, space, touchTarget, type } from '@/theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Typography
@@ -22,52 +23,128 @@ type Variant = keyof typeof type;
 
 export function AppText({ variant = 'body', style, ...rest }: TextProps & { variant?: Variant }) {
   const role = variant === 'display' || variant === 'title' ? 'header' : undefined;
-  return <Text accessibilityRole={role} maxFontSizeMultiplier={2} style={[type[variant], style]} {...rest} />;
-}
-
-/** Small-caps magazine kicker, e.g. "Your library · Vol. 1". */
-export function Kicker({ children }: { children: ReactNode }) {
-  return <AppText variant="kicker">{children}</AppText>;
+  return <Text accessibilityRole={role} style={[type[variant], style]} {...rest} />;
 }
 
 // ---------------------------------------------------------------------------
-// Layout
+// Page furniture
 // ---------------------------------------------------------------------------
+/**
+ * A scrolling page. There is no navigation bar in this design: each page opens with its
+ * mast line and a big title, so the page itself owns the top safe area.
+ */
 export function Screen({
   children,
-  scroll = true,
   contentStyle,
-}: {
-  children: ReactNode;
-  scroll?: boolean;
-  contentStyle?: ViewStyle;
-}) {
+  ...rest
+}: ScrollViewProps & { children: ReactNode; contentStyle?: ViewStyle }) {
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
-      {scroll ? (
-        <ScrollView
-          contentContainerStyle={[styles.screenContent, contentStyle]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
-          {children}
-        </ScrollView>
-      ) : (
-        <View style={[styles.screenContent, styles.flex, contentStyle]}>{children}</View>
-      )}
-    </SafeAreaView>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      style={styles.screen}
+      contentContainerStyle={[styles.screenContent, { paddingTop: insets.top + space.xl }, contentStyle]}
+      {...rest}
+    >
+      {children}
+    </ScrollView>
   );
 }
 
-export function Rule() {
-  return <View style={styles.rule} />;
+/** The small mono line at the top of every page: "BEAUTY SHELF ........ NO. 069 / PRIVATE". */
+export function Mast({ left, right }: { left: string; right?: string }) {
+  return (
+    <View style={styles.mast}>
+      <AppText variant="label">{left}</AppText>
+      {right ? <AppText variant="label" style={styles.soft}>{right}</AppText> : null}
+    </View>
+  );
+}
+
+/** The oversized page title, with an optional action on the right. */
+export function PageTitle({ children, action }: { children: string; action?: ReactNode }) {
+  return (
+    <View style={styles.pageTitle}>
+      <AppText variant="display" style={styles.flex}>
+        {children}
+      </AppText>
+      {action}
+    </View>
+  );
+}
+
+/** A labelled block. The label is a mono line, like a section heading on a label. */
+export function Section({ label, right, footer, children }: { label?: string; right?: string; footer?: string; children: ReactNode }) {
+  return (
+    <View style={styles.section}>
+      {label ? (
+        <View style={styles.sectionHead}>
+          <AppText variant="label">{label}</AppText>
+          {right ? <AppText variant="label" style={styles.soft}>{right}</AppText> : null}
+        </View>
+      ) : null}
+      {children}
+      {footer ? <AppText variant="bodySoft">{footer}</AppText> : null}
+    </View>
+  );
+}
+
+/** A ruled mono row: label on the left, detail on the right. Tappable when `onPress` is set. */
+export function Row({
+  title,
+  detail,
+  tone = 'default',
+  onPress,
+  accessibilityLabel,
+  asTyped = false,
+}: {
+  title: string;
+  detail?: string;
+  tone?: 'default' | 'danger';
+  /** Keep the text's own case (emails, names someone typed) instead of label capitals. */
+  asTyped?: boolean;
+  onPress?: () => void;
+  accessibilityLabel?: string;
+}) {
+  const label = accessibilityLabel ?? [title, detail].filter(Boolean).join(', ');
+  const content = (
+    <>
+      <AppText
+        variant={asTyped ? 'body' : 'label'}
+        style={[styles.flex, tone === 'danger' && styles.danger]}
+        numberOfLines={2}
+      >
+        {title}
+      </AppText>
+      {detail ? <AppText variant="label" style={styles.soft} numberOfLines={1}>{detail}</AppText> : null}
+    </>
+  );
+  if (!onPress) {
+    return (
+      <View style={styles.row} accessible accessibilityLabel={label}>
+        {content}
+      </View>
+    );
+  }
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    >
+      {content}
+    </Pressable>
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Controls
 // ---------------------------------------------------------------------------
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'plain' | 'danger';
 
+/** Buttons read like the mockup's: mono capitals, 14px corners, solid or outlined in ink. */
 export function Button({
   label,
   onPress,
@@ -84,6 +161,7 @@ export function Button({
   accessibilityHint?: string;
 }) {
   const inactive = disabled || loading;
+  const v = buttonVariants[variant];
   return (
     <Pressable
       onPress={onPress}
@@ -94,65 +172,155 @@ export function Button({
       accessibilityState={{ disabled: inactive, busy: loading }}
       style={({ pressed }) => [
         styles.button,
-        buttonStyles[variant],
+        { backgroundColor: v.bg, borderColor: v.border },
+        variant === 'plain' && styles.buttonPlain,
         pressed && !inactive && styles.pressed,
         inactive && styles.inactive,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' || variant === 'danger' ? colors.onAccent : colors.ink} />
+        <ActivityIndicator color={v.fg} />
       ) : (
-        <Text maxFontSizeMultiplier={1.6} style={[styles.buttonLabel, buttonLabelStyles[variant]]}>
-          {label}
-        </Text>
+        <Text style={[styles.buttonLabel, { color: v.fg }, variant === 'plain' && styles.underline]}>{label}</Text>
       )}
     </Pressable>
   );
 }
 
+const buttonVariants: Record<ButtonVariant, { bg: string; fg: string; border: string }> = {
+  primary: { bg: colors.ink, fg: colors.ground, border: colors.ink },
+  secondary: { bg: 'transparent', fg: colors.ink, border: colors.ink },
+  plain: { bg: 'transparent', fg: colors.ink, border: 'transparent' },
+  danger: { bg: colors.danger, fg: colors.ground, border: colors.danger },
+};
+
+/** An underlined mono field, like the mockup's search line. */
 export function TextField({
   label,
   error,
   hint,
   style,
+  trailing,
+  prefix,
+  onFocus,
+  onBlur,
   ...rest
-}: TextInputProps & { label: string; error?: string; hint?: string }) {
-  {
-    return (
-      <View style={styles.field}>
-        <AppText variant="caption" style={styles.fieldLabel}>
+}: TextInputProps & { label: string; error?: string; hint?: string; trailing?: ReactNode; prefix?: string }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={styles.field}>
+      {prefix ? null : (
+        <AppText variant="small" style={styles.fieldLabel}>
           {label}
         </AppText>
+      )}
+      <View style={[styles.inputLine, focused && styles.inputLineFocused, error ? styles.inputLineError : null]}>
+        {prefix ? (
+          <AppText variant="label" accessible={false}>
+            {prefix}
+          </AppText>
+        ) : null}
         <TextInput
           accessibilityLabel={label}
           accessibilityHint={error ?? hint}
-          placeholderTextColor={colors.inkFaint}
-          style={[styles.input, error ? styles.inputError : null, style]}
+          placeholderTextColor={colors.inkSoft}
+          selectionColor={colors.ink}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
+          style={[styles.input, style]}
           {...rest}
         />
-        {error ? (
-          <AppText variant="caption" style={styles.errorText} accessibilityLiveRegion="polite">
-            {error}
-          </AppText>
-        ) : hint ? (
-          <AppText variant="caption">{hint}</AppText>
-        ) : null}
+        {trailing}
       </View>
-    );
-  }
+      {error ? (
+        <AppText variant="bodySoft" style={styles.danger} accessibilityLiveRegion="polite" selectable>
+          {error}
+        </AppText>
+      ) : hint ? (
+        <AppText variant="bodySoft">{hint}</AppText>
+      ) : null}
+    </View>
+  );
 }
 
-/** Inline, non-modal message for form-level errors and notices. */
+/** Password field with a SHOW / HIDE switch in words, not an icon. */
+export function PasswordField(
+  props: Omit<TextInputProps, 'secureTextEntry'> & { label: string; error?: string; hint?: string },
+) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <TextField
+      {...props}
+      secureTextEntry={!visible}
+      autoCapitalize="none"
+      autoCorrect={false}
+      trailing={
+        <Pressable
+          onPress={() => setVisible((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={visible ? 'Hide password' : 'Show password'}
+          hitSlop={space.sm}
+          style={({ pressed }) => [styles.showButton, pressed && styles.pressed]}
+        >
+          <AppText variant="small">{visible ? 'Hide' : 'Show'}</AppText>
+        </Pressable>
+      }
+    />
+  );
+}
+
+/** Inline message for form-level errors and confirmations: a slip of label paper. */
 export function Notice({ tone = 'error', children }: { tone?: 'error' | 'info'; children: ReactNode }) {
   return (
     <View
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
-      style={[styles.notice, tone === 'error' ? styles.noticeError : styles.noticeInfo]}
+      style={[styles.notice, { backgroundColor: tone === 'error' ? colors.dangerWash : colors.paper }]}
     >
-      <AppText variant="body" style={tone === 'error' ? styles.errorText : null}>
+      <AppText variant="body" style={tone === 'error' ? styles.danger : null} selectable>
         {children}
       </AppText>
+    </View>
+  );
+}
+
+/** "[ALL]  OWNED  WISHLIST  FINISHED": the selected option sits in brackets. */
+export function BracketTabs<T extends string>({
+  options,
+  value,
+  onChange,
+  spread = true,
+}: {
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  spread?: boolean;
+}) {
+  return (
+    <View style={[styles.tabs, spread && styles.tabsSpread]} accessibilityRole="tablist">
+      {options.map((o) => {
+        const selected = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => onChange(o.value)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            accessibilityLabel={o.label}
+            style={styles.tab}
+          >
+            <Text style={[styles.tabLabel, selected && styles.tabSelected]} numberOfLines={1}>
+              {selected ? `[${o.label}]` : o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -163,7 +331,7 @@ export function Notice({ tone = 'error', children }: { tone?: 'error' | 'info'; 
 export function LoadingState({ label = 'Loading' }: { label?: string }) {
   return (
     <View style={styles.state} accessibilityLabel={label} accessible>
-      <ActivityIndicator color={colors.rose} />
+      <ActivityIndicator color={colors.inkSoft} />
     </View>
   );
 }
@@ -171,10 +339,8 @@ export function LoadingState({ label = 'Loading' }: { label?: string }) {
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <View style={styles.state}>
-      <AppText variant="title" style={styles.center}>
-        Couldn’t load this
-      </AppText>
-      <AppText variant="body" style={[styles.center, styles.muted]}>
+      <AppText variant="label">This didn’t load</AppText>
+      <AppText variant="bodySoft" selectable>
         {message}
       </AppText>
       {onRetry ? <Button label="Try again" variant="secondary" onPress={onRetry} /> : null}
@@ -182,26 +348,12 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
   );
 }
 
-export function EmptyState({
-  kicker,
-  title,
-  body,
-  action,
-}: {
-  kicker?: string;
-  title: string;
-  body: string;
-  action?: ReactNode;
-}) {
+export function EmptyState({ art, title, body, action }: { art?: ReactNode; title: string; body: string; action?: ReactNode }) {
   return (
     <View style={styles.state}>
-      {kicker ? <Kicker>{kicker}</Kicker> : null}
-      <AppText variant="title" style={styles.center}>
-        {title}
-      </AppText>
-      <AppText variant="body" style={[styles.center, styles.muted]}>
-        {body}
-      </AppText>
+      {art}
+      <AppText variant="label">{title}</AppText>
+      <AppText variant="bodySoft">{body}</AppText>
       {action}
     </View>
   );
@@ -210,56 +362,55 @@ export function EmptyState({
 // ---------------------------------------------------------------------------
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  screen: { flex: 1, backgroundColor: colors.paper },
-  screenContent: { padding: space.xl, gap: space.lg, paddingBottom: space.xxxl },
-  rule: { height: StyleSheet.hairlineWidth, backgroundColor: colors.rule, marginVertical: space.sm },
-  button: {
+  soft: { color: colors.inkSoft },
+  danger: { color: colors.danger },
+  underline: { textDecorationLine: 'underline' },
+  screen: { flex: 1, backgroundColor: colors.ground },
+  screenContent: { paddingHorizontal: space.xl, paddingBottom: space.xxxl, gap: space.xl },
+  mast: { flexDirection: 'row', justifyContent: 'space-between', gap: space.md },
+  pageTitle: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.md },
+  section: { gap: space.md },
+  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', gap: space.md },
+  row: {
     minHeight: touchTarget,
-    paddingHorizontal: space.xl,
-    borderRadius: radius.pill,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonLabel: { fontSize: 16, fontWeight: '600' },
-  pressed: { opacity: 0.8 },
-  inactive: { opacity: 0.5 },
-  field: { gap: space.xs },
-  fieldLabel: { color: colors.ink, fontWeight: '600' },
-  input: {
-    ...type.body,
-    minHeight: touchTarget,
-    paddingHorizontal: space.lg,
-    paddingVertical: space.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.rule,
-    backgroundColor: colors.paperRaised,
-  },
-  inputError: { borderColor: colors.danger },
-  errorText: { color: colors.danger },
-  notice: { padding: space.lg, borderRadius: radius.md },
-  noticeError: { backgroundColor: colors.dangerTint },
-  noticeInfo: { backgroundColor: colors.taupeTint },
-  state: {
-    alignItems: 'center',
-    justifyContent: 'center',
     gap: space.md,
-    paddingVertical: space.xxxl,
-    paddingHorizontal: space.lg,
+    paddingVertical: space.sm + 2,
+    borderBottomWidth: 1,
+    borderColor: colors.rule,
   },
-  center: { textAlign: 'center' },
-  muted: { color: colors.inkMuted },
-});
-
-const buttonStyles = StyleSheet.create({
-  primary: { backgroundColor: colors.ink },
-  secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.ink },
-  ghost: { backgroundColor: 'transparent' },
-  danger: { backgroundColor: colors.danger },
-});
-const buttonLabelStyles = StyleSheet.create({
-  primary: { color: colors.onAccent },
-  secondary: { color: colors.ink },
-  ghost: { color: colors.rose },
-  danger: { color: colors.onAccent },
+  pressed: { opacity: 0.5 },
+  inactive: { opacity: 0.4 },
+  button: {
+    minHeight: 50,
+    paddingHorizontal: space.xl,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonPlain: { minHeight: touchTarget },
+  buttonLabel: { ...type.label, color: undefined, fontSize: 13, letterSpacing: 0.8 },
+  field: { gap: space.xs },
+  fieldLabel: { color: colors.inkSoft },
+  inputLine: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    borderBottomWidth: 1,
+    borderColor: colors.ink,
+  },
+  inputLineFocused: { borderBottomWidth: 2 },
+  inputLineError: { borderColor: colors.danger },
+  input: { ...type.body, flex: 1, minHeight: 44, paddingVertical: space.sm },
+  showButton: { minHeight: 44, justifyContent: 'center', paddingLeft: space.sm },
+  notice: { padding: space.lg, borderRadius: 10 },
+  tabs: { flexDirection: 'row', gap: space.lg },
+  tabsSpread: { justifyContent: 'space-between' },
+  tab: { minHeight: 44, justifyContent: 'center' },
+  tabLabel: { ...type.label, color: colors.inkSoft },
+  tabSelected: { color: colors.ink, fontFamily: fonts.monoMedium },
+  state: { gap: space.sm, paddingVertical: space.xxl },
 });

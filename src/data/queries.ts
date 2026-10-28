@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { requireSupabase } from '@/lib/supabase';
-import { listCollections } from './collections';
+import { listCollections, listShelfItemIds } from './collections';
 import { libraryCounts, listLibrary } from './library';
 import { getProfile } from './profile';
 
@@ -10,6 +10,7 @@ export const keys = {
   library: ['library'] as const,
   libraryCounts: ['library', 'counts'] as const,
   collections: ['collections'] as const,
+  shelf: ['collections', 'shelf'] as const,
   profile: ['profile'] as const,
 };
 
@@ -19,3 +20,4 @@ export const useLibraryCounts = () =>
 export const useCollections = () =>
   useQuery({ queryKey: keys.collections, queryFn: () => listCollections(requireSupabase()) });
 export const useProfile = () => useQuery({ queryKey: keys.profile, queryFn: () => getProfile(requireSupabase()) });
+export const useShelf = () => useQuery({ queryKey: keys.shelf, queryFn: () => listShelfItemIds(requireSupabase()) });

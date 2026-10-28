@@ -2,9 +2,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Kicker, Notice, Rule, Screen, TextField } from '@/components/ui';
+import { AuthFrame } from '@/components/auth-frame';
+import { AppText, Button, Mast, Notice, PageTitle, PasswordField, TextField } from '@/components/ui';
 import { signInSchema, type SignInInput } from '@/domain/validation';
 import { toAppError } from '@/lib/errors';
 import { requireSupabase } from '@/lib/supabase';
@@ -25,63 +26,60 @@ export default function SignInScreen() {
   });
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Screen contentStyle={styles.content}>
-        <View style={styles.masthead}>
-          <Kicker>Issue No. 01</Kicker>
-          <AppText variant="display">Beauty Shelf</AppText>
-          <AppText variant="body" style={styles.tagline}>
-            Know what you own, remember what you loved, and curate your beauty world.
-          </AppText>
-        </View>
-        <Rule />
-        {formError ? <Notice>{formError}</Notice> : null}
-        <Controller
-          control={control}
-          name="email"
-          render={({ field, fieldState }) => (
-            <TextField
-              label="Email"
-              value={field.value}
-              onChangeText={field.onChange}
-              onBlur={field.onBlur}
-              error={fieldState.error?.message}
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              returnKeyType="next"
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="password"
-          render={({ field, fieldState }) => (
-            <TextField
-              label="Password"
-              value={field.value}
-              onChangeText={field.onChange}
-              onBlur={field.onBlur}
-              error={fieldState.error?.message}
-              secureTextEntry
-              autoComplete="current-password"
-              textContentType="password"
-              returnKeyType="go"
-              onSubmitEditing={() => onSubmit()}
-            />
-          )}
-        />
+    <AuthFrame>
+      <Mast left="Beauty shelf" right="Private" />
+      <View style={styles.masthead}>
+        <PageTitle>{'Beauty\nshelf'}</PageTitle>
+        <AppText variant="bodySoft" style={styles.tagline}>
+          Keep track of what you own, what you want and what you’ve finished.
+        </AppText>
+      </View>
+      {formError ? <Notice>{formError}</Notice> : null}
+      <Controller
+        control={control}
+        name="email"
+        render={({ field, fieldState }) => (
+          <TextField
+            label="Email"
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            error={fieldState.error?.message}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            textContentType="username"
+            returnKeyType="next"
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="password"
+        render={({ field, fieldState }) => (
+          <PasswordField
+            label="Password"
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            error={fieldState.error?.message}
+            autoComplete="current-password"
+            textContentType="password"
+            returnKeyType="go"
+            onSubmitEditing={() => onSubmit()}
+          />
+        )}
+      />
+      <View style={styles.actions}>
         <Button label="Sign in" onPress={onSubmit} loading={formState.isSubmitting} />
-        <Button label="New here? Create an account" variant="ghost" onPress={() => router.push('/sign-up')} />
-      </Screen>
-    </KeyboardAvoidingView>
+        <Button label="Create an account" variant="plain" onPress={() => router.push('/sign-up')} />
+      </View>
+    </AuthFrame>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'center' },
-  masthead: { gap: space.sm },
-  tagline: { maxWidth: 340 },
+  masthead: { gap: space.md, marginBottom: space.md },
+  tagline: { maxWidth: 320 },
+  actions: { gap: space.xs, marginTop: space.sm },
 });

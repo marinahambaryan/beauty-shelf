@@ -3,12 +3,17 @@ import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, Button, Kicker, Notice, Screen, TextField } from '@/components/ui';
+import { AuthFrame } from '@/components/auth-frame';
+import { AppText, Button, Mast, Notice, PageTitle, PasswordField, TextField } from '@/components/ui';
 import { signUpSchema, type SignUpInput } from '@/domain/validation';
 import { toAppError } from '@/lib/errors';
 import { requireSupabase } from '@/lib/supabase';
+import { space } from '@/theme/tokens';
+
+// Mirrors signUpSchema so iOS-generated strong passwords always pass validation.
+const PASSWORD_RULES = 'minlength: 8; maxlength: 72;';
 
 export default function SignUpScreen() {
   const [formError, setFormError] = useState<string | null>(null);
@@ -32,83 +37,88 @@ export default function SignUpScreen() {
 
   if (awaitingConfirmation) {
     return (
-      <Screen contentStyle={styles.content}>
-        <Kicker>Almost there</Kicker>
-        <AppText variant="title">Check your inbox</AppText>
-        <AppText>
-          We sent a confirmation link to {awaitingConfirmation}. Open it, then come back and sign in.
-        </AppText>
+      <AuthFrame>
+        <Mast left="Beauty shelf" right="New account" />
+        <View style={styles.masthead}>
+          <PageTitle>{'Check your\nemail'}</PageTitle>
+          <AppText variant="body">
+            We sent a confirmation link to {awaitingConfirmation}. Open it, then come back and sign in.
+          </AppText>
+        </View>
         <Button label="Back to sign in" variant="secondary" onPress={() => router.back()} />
-      </Screen>
+      </AuthFrame>
     );
   }
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Screen contentStyle={styles.content}>
-        <Kicker>New subscriber</Kicker>
-        <AppText variant="title">Create your account</AppText>
-        <AppText variant="caption">Your library is private to you.</AppText>
-        {formError ? <Notice>{formError}</Notice> : null}
-        <Controller
-          control={control}
-          name="email"
-          render={({ field, fieldState }) => (
-            <TextField
-              label="Email"
-              value={field.value}
-              onChangeText={field.onChange}
-              onBlur={field.onBlur}
-              error={fieldState.error?.message}
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              textContentType="emailAddress"
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="password"
-          render={({ field, fieldState }) => (
-            <TextField
-              label="Password"
-              hint="At least 8 characters."
-              value={field.value}
-              onChangeText={field.onChange}
-              onBlur={field.onBlur}
-              error={fieldState.error?.message}
-              secureTextEntry
-              autoComplete="new-password"
-              textContentType="newPassword"
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="confirm"
-          render={({ field, fieldState }) => (
-            <TextField
-              label="Confirm password"
-              value={field.value}
-              onChangeText={field.onChange}
-              onBlur={field.onBlur}
-              error={fieldState.error?.message}
-              secureTextEntry
-              autoComplete="new-password"
-              textContentType="newPassword"
-              onSubmitEditing={() => onSubmit()}
-            />
-          )}
-        />
+    <AuthFrame>
+      <Mast left="Beauty shelf" right="New account" />
+      <View style={styles.masthead}>
+        <PageTitle>{'New\naccount'}</PageTitle>
+        <AppText variant="bodySoft">Your library is private to you.</AppText>
+      </View>
+      {formError ? <Notice>{formError}</Notice> : null}
+      <Controller
+        control={control}
+        name="email"
+        render={({ field, fieldState }) => (
+          <TextField
+            label="Email"
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            error={fieldState.error?.message}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            // "username" pairs this field with the new password so iOS offers a strong password and saves both.
+            textContentType="username"
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="password"
+        render={({ field, fieldState }) => (
+          <PasswordField
+            label="Password"
+            hint="At least 8 characters."
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            error={fieldState.error?.message}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            passwordRules={PASSWORD_RULES}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="confirm"
+        render={({ field, fieldState }) => (
+          <PasswordField
+            label="Confirm password"
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            error={fieldState.error?.message}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            passwordRules={PASSWORD_RULES}
+            onSubmitEditing={() => onSubmit()}
+          />
+        )}
+      />
+      <View style={styles.actions}>
         <Button label="Create account" onPress={onSubmit} loading={formState.isSubmitting} />
-        <Button label="I already have an account" variant="ghost" onPress={() => router.back()} />
-      </Screen>
-    </KeyboardAvoidingView>
+        <Button label="I already have an account" variant="plain" onPress={() => router.back()} />
+      </View>
+    </AuthFrame>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'center' },
+  masthead: { gap: space.md, marginBottom: space.md },
+  actions: { gap: space.xs, marginTop: space.sm },
 });

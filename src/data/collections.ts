@@ -31,3 +31,17 @@ export async function listCollections(db: Supabase): Promise<CollectionSummary[]
     }))
     .sort((a, b) => typeOrder[a.type] - typeOrder[b.type]);
 }
+
+/**
+ * The curated shelf's library items, in slot order. RLS limits rows to the signed-in
+ * user, and each user has at most one shelf (DECISIONS.md D3–D4).
+ */
+export async function listShelfItemIds(db: Supabase): Promise<string[]> {
+  const { data, error } = await db
+    .from('collection_items')
+    .select('library_item_id, sort_order, collections!inner(type)')
+    .eq('collections.type', 'shelf')
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((r) => r.library_item_id).filter((id): id is string => Boolean(id));
+}

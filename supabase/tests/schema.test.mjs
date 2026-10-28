@@ -37,15 +37,15 @@ describe('account bootstrap', () => {
 
 describe('catalog', () => {
   test('signed-in users can search; multi-term queries match brand + name', async () => {
-    const rows = await as(alice, (q) => q("select * from search_catalog('atelier lip')"));
+    const rows = await as(alice, (q) => q("select * from search_catalog('tilbury matte')"));
     assert.equal(rows.length, 1);
-    assert.equal(rows[0].product_name, 'Satin Lip Colour');
+    assert.equal(rows[0].product_name, 'Matte Revolution Lipstick');
     assert.equal(rows[0].variant_count, 3);
     assert.equal(rows[0].default_variant_id, null);
   });
 
   test('products without shades expose a default variant', async () => {
-    const [row] = await as(alice, (q) => q("select * from search_catalog('kabuki')"));
+    const [row] = await as(alice, (q) => q("select * from search_catalog('curler')"));
     assert.equal(row.variant_count, 1);
     assert.ok(row.default_variant_id);
   });
