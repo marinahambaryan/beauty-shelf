@@ -146,6 +146,7 @@ export type Database = {
           notes: string | null;
           ownership_status: Database["public"]["Enums"]["ownership_status"];
           personal_product_id: string | null;
+          photo_path: string | null;
           rating: number | null;
           repurchase_intent:
             Database["public"]["Enums"]["repurchase_intent"] | null;
@@ -163,6 +164,7 @@ export type Database = {
           notes?: string | null;
           ownership_status: Database["public"]["Enums"]["ownership_status"];
           personal_product_id?: string | null;
+          photo_path?: string | null;
           rating?: number | null;
           repurchase_intent?:
             Database["public"]["Enums"]["repurchase_intent"] | null;
@@ -179,6 +181,7 @@ export type Database = {
           notes?: string | null;
           ownership_status?: Database["public"]["Enums"]["ownership_status"];
           personal_product_id?: string | null;
+          photo_path?: string | null;
           rating?: number | null;
           repurchase_intent?:
             Database["public"]["Enums"]["repurchase_intent"] | null;

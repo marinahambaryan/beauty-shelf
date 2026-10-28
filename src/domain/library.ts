@@ -112,3 +112,55 @@ export function matchesQuery(item: { name: string; brand: string; variant?: stri
     .filter(Boolean)
     .every((term) => haystack.includes(term));
 }
+
+export const REPURCHASE_INTENTS: readonly RepurchaseIntent[] = ['yes', 'unsure', 'no'];
+export const repurchaseLabel: Record<RepurchaseIntent, string> = { yes: 'Yes', unsure: 'Not sure', no: 'No' };
+
+/** The editable experience of one library item, as the editor holds it. */
+export type ItemDraft = {
+  ownershipStatus: OwnershipStatus;
+  usageStatus: UsageStatus | null;
+  rating: number | null;
+  repurchaseIntent: RepurchaseIntent | null;
+  /** Already validated: YYYY-MM-DD or null. */
+  finishedAt: string | null;
+  notes: string | null;
+};
+
+export type ItemPatch = Partial<{
+  ownership_status: OwnershipStatus;
+  usage_status: UsageStatus | null;
+  rating: number | null;
+  repurchase_intent: RepurchaseIntent | null;
+  finished_at: string | null;
+  notes: string | null;
+}>;
+
+/**
+ * The columns that actually changed between the saved item and the draft, applying the
+ * same status rules as the database (usage only while Owned). An empty patch means
+ * there is nothing to save. A finished date only travels while the item is Finished:
+ * leaving Finished keeps the stored date, as the database does.
+ */
+export function itemPatch(saved: ItemDraft, draft: ItemDraft): ItemPatch {
+  const patch: ItemPatch = {};
+  const usage = draft.ownershipStatus === 'owned' ? draft.usageStatus : null;
+  if (draft.ownershipStatus !== saved.ownershipStatus) patch.ownership_status = draft.ownershipStatus;
+  if (usage !== saved.usageStatus) patch.usage_status = usage;
+  if (draft.rating !== saved.rating) patch.rating = draft.rating;
+  if (draft.repurchaseIntent !== saved.repurchaseIntent) patch.repurchase_intent = draft.repurchaseIntent;
+  if (draft.ownershipStatus === 'finished' && draft.finishedAt !== saved.finishedAt) patch.finished_at = draft.finishedAt;
+  if ((draft.notes ?? null) !== (saved.notes ?? null)) patch.notes = draft.notes;
+  return patch;
+}
+
+/** What a shade/size picker should call its choices, from what the variants carry. */
+export function variantKind(variants: readonly { shadeName: string | null; sizeLabel: string | null }[]): 'Shade' | 'Size' {
+  return variants.some((v) => v.shadeName) ? 'Shade' : 'Size';
+}
+
+/** Today in the device's time zone, as YYYY-MM-DD. */
+export function todayISO(now = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}

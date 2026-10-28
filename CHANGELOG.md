@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0 — Milestone 2: adding products (28 Oct 2026)
+
+### Added
+- **Add product**: catalogue search (debounced, category filter) with "Can't find it? Add it manually" always visible.
+- Product page with a shade/size picker (skipped for single-variant products), Owned / Wishlist / Finished and an optional note. Shades already in the library are marked, and adding one again opens the existing entry instead.
+- **Add manually**: brand, name, shade or size, category, status, note and an optional photo (library or camera).
+- **Library item editor**: status, usage, rating, "Would you buy it again?", finished date and notes, saved together with a version check; your own photo (add, change, remove); delete with a confirmation that says what's lost.
+- Library cards, Home shelf bottles and Home index rows open the item; "+ Add" on Home and Library.
+- Migration `library_items.photo_path`; `expo-image-picker` and `expo-image-manipulator`.
+- Tests: 21 more unit tests (editing rules, form schemas, version-checked saves, photo upload and clean-up order), 3 more database tests (photo folder rule, version bump, stale save).
+
+## 0.2.0 — Redesign and real catalogue (28 Oct 2026)
+- Direction D "Apothecary" design on white; real 15-product seed catalogue without images (see D11, D13).
+
 ## 0.1.0 — Milestones 0 + 1 (27 Oct 2026)
 
 ### Added

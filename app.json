@@ -36,7 +36,15 @@
           "imageWidth": 160
         }
       ],
-      "expo-image"
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Beauty Shelf uses your photos so you can add a picture of a product.",
+          "cameraPermission": "Beauty Shelf uses the camera so you can take a picture of a product.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "scheme": "beautyshelf",
     "experiments": {

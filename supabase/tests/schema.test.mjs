@@ -379,6 +379,33 @@ describe('curated shelf', () => {
   });
 });
 
+describe('your own photos on library entries', () => {
+  test('any entry can carry a photo from the owner\'s folder, and changing it bumps the version', async () => {
+    const item = await as(alice, (q) => addVariant(q, FOUNDATION_HONEY, 'wishlist'));
+    const [before] = await as(alice, (q) => q('select version from library_items where id = $1', [item.library_item_id]));
+    await as(alice, (q) =>
+      q('update library_items set photo_path = $1 where id = $2', [`${alice}/mine.jpg`, item.library_item_id]));
+    const [row] = await as(alice, (q) =>
+      q('select photo_path, version from library_items where id = $1', [item.library_item_id]));
+    assert.equal(row.photo_path, `${alice}/mine.jpg`);
+    assert.equal(row.version, before.version + 1);
+  });
+
+  test('a photo path outside the owner\'s folder is rejected', async () => {
+    const [li] = await as(alice, (q) => q('select id from library_items limit 1'));
+    await expectDenied(alice, (q) =>
+      q('update library_items set photo_path = $1 where id = $2', [`${bob}/theirs.jpg`, li.id]),
+      /check constraint/);
+  });
+
+  test('a stale save changes nothing (version check)', async () => {
+    const [li] = await as(alice, (q) => q('select id, version from library_items limit 1'));
+    const updated = await as(alice, (q) =>
+      q('update library_items set rating = 2 where id = $1 and version = $2 returning id', [li.id, li.version - 1]));
+    assert.equal(updated.length, 0);
+  });
+});
+
 describe('storage policies', () => {
   test('users can only read and write inside their own folder', async () => {
     await as(alice, (q) => q("insert into storage.objects (bucket_id, name) values ('product-photos', $1)", [`${alice}/a.jpg`]));

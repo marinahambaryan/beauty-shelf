@@ -36,15 +36,26 @@ export function AppText({ variant = 'body', style, ...rest }: TextProps & { vari
 export function Screen({
   children,
   contentStyle,
+  bottomInset = false,
   ...rest
-}: ScrollViewProps & { children: ReactNode; contentStyle?: ViewStyle }) {
+}: ScrollViewProps & {
+  children: ReactNode;
+  contentStyle?: ViewStyle;
+  /** Pages outside the tabs (no tab bar below) also clear the home indicator. */
+  bottomInset?: boolean;
+}) {
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
       style={styles.screen}
-      contentContainerStyle={[styles.screenContent, { paddingTop: insets.top + space.xl }, contentStyle]}
+      contentContainerStyle={[
+        styles.screenContent,
+        { paddingTop: insets.top + space.xl },
+        bottomInset && { paddingBottom: insets.bottom + space.xxxl },
+        contentStyle,
+      ]}
       {...rest}
     >
       {children}
@@ -59,6 +70,72 @@ export function Mast({ left, right }: { left: string; right?: string }) {
       <AppText variant="label">{left}</AppText>
       {right ? <AppText variant="label" style={styles.soft}>{right}</AppText> : null}
     </View>
+  );
+}
+
+/**
+ * The line above the mast on pages pushed over the tabs: "← BACK" on the left and an
+ * optional action on the right. Words, not icons, like the rest of the design.
+ */
+export function TopBar({ onBack, backLabel = 'Back', right }: { onBack: () => void; backLabel?: string; right?: ReactNode }) {
+  return (
+    <View style={styles.topBar}>
+      <Pressable
+        onPress={onBack}
+        accessibilityRole="button"
+        accessibilityLabel={backLabel}
+        hitSlop={space.sm}
+        style={({ pressed }) => [styles.topBarButton, pressed && styles.pressed]}
+      >
+        <AppText variant="label">← {backLabel}</AppText>
+      </Pressable>
+      {right}
+    </View>
+  );
+}
+
+/** A small mono text action: "+ ADD", "CHANGE PHOTO". Underlined so it reads as tappable. */
+export function TextAction({
+  label,
+  onPress,
+  accessibilityLabel,
+  tone = 'default',
+  disabled = false,
+}: {
+  label: string;
+  onPress: () => void;
+  accessibilityLabel?: string;
+  tone?: 'default' | 'danger';
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ disabled }}
+      hitSlop={space.xs}
+      style={({ pressed }) => [styles.textAction, pressed && styles.pressed, disabled && styles.inactive]}
+    >
+      <AppText variant="label" style={[styles.underline, tone === 'danger' && styles.danger]}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+/** The outlined pill that sits beside a page title: "+ ADD". */
+export function PillAction({ label, onPress, accessibilityLabel }: { label: string; onPress: () => void; accessibilityLabel?: string }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
+    >
+      <AppText variant="label">{label}</AppText>
+    </Pressable>
   );
 }
 
@@ -214,7 +291,14 @@ export function TextField({
           {label}
         </AppText>
       )}
-      <View style={[styles.inputLine, focused && styles.inputLineFocused, error ? styles.inputLineError : null]}>
+      <View
+        style={[
+          styles.inputLine,
+          rest.multiline && styles.inputLineMultiline,
+          focused && styles.inputLineFocused,
+          error ? styles.inputLineError : null,
+        ]}
+      >
         {prefix ? (
           <AppText variant="label" accessible={false}>
             {prefix}
@@ -233,7 +317,7 @@ export function TextField({
             setFocused(false);
             onBlur?.(e);
           }}
-          style={[styles.input, style]}
+          style={[styles.input, rest.multiline && styles.inputMultiline, webNoOutline, style]}
           {...rest}
         />
         {trailing}
@@ -296,23 +380,33 @@ export function BracketTabs<T extends string>({
   value,
   onChange,
   spread = true,
+  onClear,
+  accessibilityLabel,
 }: {
   options: readonly { value: T; label: string }[];
-  value: T;
+  value: T | null;
   onChange: (v: T) => void;
   spread?: boolean;
+  /** For optional choices: tapping the selected option again clears it. */
+  onClear?: () => void;
+  accessibilityLabel?: string;
 }) {
   return (
-    <View style={[styles.tabs, spread && styles.tabsSpread]} accessibilityRole="tablist">
+    <View
+      style={[styles.tabs, spread && styles.tabsSpread]}
+      accessibilityRole={onClear ? 'radiogroup' : 'tablist'}
+      accessibilityLabel={accessibilityLabel}
+    >
       {options.map((o) => {
         const selected = o.value === value;
         return (
           <Pressable
             key={o.value}
-            onPress={() => onChange(o.value)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected }}
+            onPress={() => (selected && onClear ? onClear() : onChange(o.value))}
+            accessibilityRole={onClear ? 'radio' : 'tab'}
+            accessibilityState={onClear ? { checked: selected } : { selected }}
             accessibilityLabel={o.label}
+            accessibilityHint={selected && onClear ? 'Tap again to clear' : undefined}
             style={styles.tab}
           >
             <Text style={[styles.tabLabel, selected && styles.tabSelected]} numberOfLines={1}>
@@ -360,6 +454,9 @@ export function EmptyState({ art, title, body, action }: { art?: ReactNode; titl
 }
 
 // ---------------------------------------------------------------------------
+// Browsers draw a focus ring around inputs; this design thickens the underline instead.
+const webNoOutline = process.env.EXPO_OS === 'web' ? ({ outlineStyle: 'none' } as unknown as ViewStyle) : null;
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   soft: { color: colors.inkSoft },
@@ -402,9 +499,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: colors.ink,
   },
+  inputLineMultiline: { alignItems: 'flex-start' },
   inputLineFocused: { borderBottomWidth: 2 },
   inputLineError: { borderColor: colors.danger },
   input: { ...type.body, flex: 1, minHeight: 44, paddingVertical: space.sm },
+  inputMultiline: { minHeight: 88, textAlignVertical: 'top' },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md, marginBottom: -space.sm },
+  topBarButton: { minHeight: 44, justifyContent: 'center' },
+  textAction: { minHeight: 44, justifyContent: 'center' },
+  pill: {
+    minHeight: 44,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: space.xs,
+  },
   showButton: { minHeight: 44, justifyContent: 'center', paddingLeft: space.sm },
   notice: { padding: space.lg, borderRadius: 10 },
   tabs: { flexDirection: 'row', gap: space.lg },

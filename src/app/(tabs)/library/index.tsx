@@ -1,10 +1,10 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ProductCard } from '@/components/ProductRow';
-import { BracketTabs, EmptyState, ErrorState, LoadingState, Mast, PageTitle, TextField } from '@/components/ui';
+import { BracketTabs, Button, EmptyState, ErrorState, LoadingState, Mast, PageTitle, PillAction, TextField } from '@/components/ui';
 import { useLibrary } from '@/data/queries';
 import {
   CATEGORIES,
@@ -62,7 +62,9 @@ export default function LibraryScreen() {
   const header = (
     <View style={styles.header}>
       <Mast left="Library" right={`${catalogNo(data.length)} items`} />
-      <PageTitle>{'Every-\nthing'}</PageTitle>
+      <PageTitle action={<PillAction label="+ Add" accessibilityLabel="Add product" onPress={openAdd} />}>
+        {'Every-\nthing'}
+      </PageTitle>
       <TextField
         label="Search your library"
         prefix="Search /"
@@ -150,7 +152,8 @@ export default function LibraryScreen() {
         ) : data.length === 0 ? (
           <EmptyState
             title="Your library is empty"
-            body="Your library is where everything you own, want and finish lives. Adding products arrives in the next update."
+            body="Your library is where everything you own, want and finish lives."
+            action={<Button label="Add product" onPress={openAdd} />}
           />
         ) : query.trim() ? (
           <EmptyState title={`No matches for “${query.trim()}”`} body="Try another name, brand or shade." />
@@ -161,6 +164,8 @@ export default function LibraryScreen() {
     />
   );
 }
+
+const openAdd = () => router.push('/add');
 
 function Gap() {
   return <View style={styles.gap} />;

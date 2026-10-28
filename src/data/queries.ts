@@ -1,6 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
+import type { ProductCategory } from '@/domain/library';
 import { requireSupabase } from '@/lib/supabase';
+import { supabaseCatalog } from './catalog';
 import { listCollections, listShelfItemIds } from './collections';
 import { libraryCounts, listLibrary } from './library';
 import { getProfile } from './profile';
@@ -12,6 +14,8 @@ export const keys = {
   collections: ['collections'] as const,
   shelf: ['collections', 'shelf'] as const,
   profile: ['profile'] as const,
+  catalogSearch: (query: string, category: ProductCategory | null) => ['catalog', 'search', query, category] as const,
+  catalogProduct: (id: string) => ['catalog', 'product', id] as const,
 };
 
 export const useLibrary = () => useQuery({ queryKey: keys.library, queryFn: () => listLibrary(requireSupabase()) });
@@ -21,3 +25,27 @@ export const useCollections = () =>
   useQuery({ queryKey: keys.collections, queryFn: () => listCollections(requireSupabase()) });
 export const useProfile = () => useQuery({ queryKey: keys.profile, queryFn: () => getProfile(requireSupabase()) });
 export const useShelf = () => useQuery({ queryKey: keys.shelf, queryFn: () => listShelfItemIds(requireSupabase()) });
+
+/** One library entry, read from the library list so every screen agrees on it. */
+export function useLibraryItem(id: string | undefined) {
+  const library = useLibrary();
+  const entry = id ? library.data?.find((e) => e.id === id) : undefined;
+  return { ...library, entry };
+}
+
+/** Catalogue search. Keeps the previous results on screen while the next query loads. */
+export const useCatalogSearch = (query: string, category: ProductCategory | null) =>
+  useQuery({
+    queryKey: keys.catalogSearch(query, category),
+    queryFn: () => supabaseCatalog(requireSupabase()).search({ query, category: category ?? undefined }),
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
+  });
+
+export const useCatalogProduct = (id: string | undefined) =>
+  useQuery({
+    queryKey: keys.catalogProduct(id ?? ''),
+    queryFn: () => supabaseCatalog(requireSupabase()).getProduct(id ?? ''),
+    enabled: Boolean(id),
+    staleTime: 5 * 60_000,
+  });

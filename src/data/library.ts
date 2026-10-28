@@ -1,20 +1,31 @@
 import type { Supabase } from '@/lib/supabase';
+import type { PersonalProductInput } from '@/domain/validation';
+import { removePhotos, signPhotos, uploadPhoto } from './photos';
 import type {
   OwnershipStatus,
   ProductCategory,
   RepurchaseIntent,
   UsageStatus,
+  ItemPatch,
 } from '@/domain/library';
 
 export type LibraryEntry = {
   id: string;
   source: 'catalog' | 'personal';
+  /** The catalogue shade/size this entry is, for catalog entries. */
+  variantId: string | null;
+  productId: string | null;
+  /** The private product behind an entry that was added manually. */
+  personalProductId: string | null;
   brand: string;
   name: string;
   variant: string | null;
   category: ProductCategory;
+  /** What to show: the person's own photo (signed URL) when there is one, else the catalogue's. */
   imageUrl: string | null;
-  /** Private storage path for personal products; resolve to a signed URL before display. */
+  /** The person's own photo of this entry, in the private product-photos bucket. */
+  photoPath: string | null;
+  /** The photo given when a product was added manually, in the same bucket. */
   imagePath: string | null;
   ownershipStatus: OwnershipStatus;
   usageStatus: UsageStatus | null;
@@ -27,8 +38,9 @@ export type LibraryEntry = {
 };
 
 const LIBRARY_SELECT = `
-  id, ownership_status, usage_status, rating, notes, repurchase_intent, finished_at, updated_at, version,
-  product_variants(label, image_url, products(name, category, image_url, brands(name))),
+  id, catalog_variant_id, personal_product_id, photo_path, ownership_status, usage_status, rating, notes, repurchase_intent,
+  finished_at, updated_at, version,
+  product_variants(label, image_url, product_id, products(name, category, image_url, brands(name))),
   personal_products(brand_name, name, category, variant_label, image_path)
 ` as const;
 
@@ -39,9 +51,10 @@ export async function listLibrary(db: Supabase): Promise<LibraryEntry[]> {
     .order('updated_at', { ascending: false });
   if (error) throw error;
 
-  return (data ?? []).map((row) => {
+  const entries: LibraryEntry[] = (data ?? []).map((row) => {
     const base = {
       id: row.id,
+      photoPath: row.photo_path,
       ownershipStatus: row.ownership_status,
       usageStatus: row.usage_status,
       rating: row.rating,
@@ -56,6 +69,9 @@ export async function listLibrary(db: Supabase): Promise<LibraryEntry[]> {
       return {
         ...base,
         source: 'catalog' as const,
+        variantId: row.catalog_variant_id,
+        productId: v.product_id,
+        personalProductId: null,
         brand: v.products.brands?.name ?? '',
         name: v.products.name,
         variant: v.label,
@@ -68,6 +84,9 @@ export async function listLibrary(db: Supabase): Promise<LibraryEntry[]> {
     return {
       ...base,
       source: 'personal' as const,
+      variantId: null,
+      productId: null,
+      personalProductId: row.personal_product_id,
       brand: p?.brand_name ?? '',
       name: p?.name ?? '',
       variant: p?.variant_label ?? null,
@@ -76,7 +95,27 @@ export async function listLibrary(db: Supabase): Promise<LibraryEntry[]> {
       imagePath: p?.image_path ?? null,
     };
   });
+  return withPhotos(db, entries);
 }
+
+/**
+ * Own photos live in a private bucket, so each is shown through a short-lived signed URL,
+ * fetched in one request for the whole library. A photo that can't be signed falls back
+ * to the catalogue image (or the neutral stand-in) rather than failing the list.
+ */
+async function withPhotos(db: Supabase, entries: LibraryEntry[]): Promise<LibraryEntry[]> {
+  const paths = [...new Set(entries.map(ownPhotoPath).filter((p): p is string => Boolean(p)))];
+  if (!paths.length) return entries;
+  const urls = await signPhotos(db, paths).catch(() => new Map<string, string>());
+  return entries.map((e) => {
+    const path = ownPhotoPath(e);
+    const url = path ? urls.get(path) : undefined;
+    return url ? { ...e, imageUrl: url } : e;
+  });
+}
+
+/** The person's own photo wins over the one given when added manually. */
+export const ownPhotoPath = (e: Pick<LibraryEntry, 'photoPath' | 'imagePath'>) => e.photoPath ?? e.imagePath;
 
 export type LibraryCounts = Record<OwnershipStatus | 'all', number>;
 
@@ -131,4 +170,68 @@ export async function createPersonalProduct(
   });
   if (error) throw error;
   return data;
+}
+
+/**
+ * Saves the editor's changes only if nobody else changed the item since it was loaded
+ * (the version check). A stale save raises 'version_conflict'; a deleted item, not_found.
+ */
+export async function updateLibraryItem(
+  db: Supabase,
+  input: { id: string; version: number; patch: ItemPatch & { photo_path?: string | null } },
+): Promise<number> {
+  const { data, error } = await db
+    .from('library_items')
+    .update(input.patch)
+    .eq('id', input.id)
+    .eq('version', input.version)
+    .select('version')
+    .maybeSingle();
+  if (error) throw error;
+  if (data) return data.version;
+  const { data: still } = await db.from('library_items').select('id').eq('id', input.id).maybeSingle();
+  if (still) throw new Error('version_conflict');
+  throw Object.assign(new Error('not found'), { code: 'P0002' });
+}
+
+/** Deletes the entry (memberships and history cascade in the database). */
+export async function deleteLibraryItem(db: Supabase, id: string) {
+  const { error } = await db.from('library_items').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** Uploads the photo first (if any), then creates the product; a failed create removes the photo again. */
+export async function addManually(
+  db: Supabase,
+  userId: string,
+  input: PersonalProductInput & { photoUri: string | null },
+): Promise<string> {
+  const imagePath = input.photoUri ? await uploadPhoto(db, userId, input.photoUri) : null;
+  try {
+    return await createPersonalProduct(db, { ...input, imagePath });
+  } catch (error) {
+    await removePhotos(db, [imagePath]);
+    throw error;
+  }
+}
+
+/**
+ * Sets (uri) or removes (null) the person's own photo of an entry. The new file is uploaded
+ * before the row changes, and the old one is removed only once nothing points at it.
+ */
+export async function setPhoto(db: Supabase, userId: string, entry: LibraryEntry, uri: string | null) {
+  const next = uri ? await uploadPhoto(db, userId, uri) : null;
+  try {
+    if (entry.personalProductId) {
+      // A product added manually keeps its one photo on the product itself.
+      const { error } = await db.from('personal_products').update({ image_path: next }).eq('id', entry.personalProductId);
+      if (error) throw error;
+    } else {
+      await updateLibraryItem(db, { id: entry.id, version: entry.version, patch: { photo_path: next } });
+    }
+  } catch (error) {
+    await removePhotos(db, [next]);
+    throw error;
+  }
+  await removePhotos(db, [entry.personalProductId ? entry.imagePath : entry.photoPath]);
 }

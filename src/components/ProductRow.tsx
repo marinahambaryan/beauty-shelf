@@ -1,5 +1,6 @@
 import { memo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { LibraryEntry } from '@/data/library';
 import { categoryLabel, ownershipLabel, usageLabel } from '@/domain/library';
@@ -11,6 +12,8 @@ export function statusText(entry: LibraryEntry) {
   if (entry.ownershipStatus === 'owned') return entry.usageStatus ? usageLabel[entry.usageStatus] : ownershipLabel.owned;
   return ownershipLabel[entry.ownershipStatus];
 }
+
+export const openItem = (id: string) => router.push({ pathname: '/item/[id]', params: { id } });
 
 function describe(entry: LibraryEntry, n?: number) {
   return [
@@ -30,7 +33,12 @@ function describe(entry: LibraryEntry, n?: number) {
 /** A Library card: number and status on top, the product in the middle, name and shade below. */
 export const ProductCard = memo(function ProductCard({ entry, n }: { entry: LibraryEntry; n: number }) {
   return (
-    <View style={styles.card} accessible accessibilityLabel={describe(entry, n)}>
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      onPress={() => openItem(entry.id)}
+      accessibilityRole="button"
+      accessibilityLabel={describe(entry, n)}
+    >
       <View style={styles.cardTop}>
         <Text style={type.small}>{twoDigit(n)}</Text>
         <Text style={type.small} numberOfLines={1}>
@@ -54,7 +62,7 @@ export const ProductCard = memo(function ProductCard({ entry, n }: { entry: Libr
           {entry.variant ?? entry.brand}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 });
 
@@ -62,19 +70,25 @@ export const ProductCard = memo(function ProductCard({ entry, n }: { entry: Libr
 export function IndexRow({ entry, n }: { entry: LibraryEntry; n: number }) {
   const name = entry.variant ? `${entry.name} — ${entry.variant}` : entry.name;
   return (
-    <View style={styles.index} accessible accessibilityLabel={describe(entry)}>
+    <Pressable
+      style={({ pressed }) => [styles.index, pressed && styles.pressed]}
+      onPress={() => openItem(entry.id)}
+      accessibilityRole="button"
+      accessibilityLabel={describe(entry)}
+    >
       <Text style={[type.label, styles.indexText]} numberOfLines={1}>
         {twoDigit(n)}
         {'  '}
         {name}
       </Text>
       <Text style={[type.label, styles.soft]}>{statusText(entry)}</Text>
-    </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   soft: { color: colors.inkSoft },
+  pressed: { opacity: 0.6 },
   card: {
     flex: 1,
     height: 214,

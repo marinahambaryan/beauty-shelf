@@ -2,9 +2,9 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { IndexRow } from '@/components/ProductRow';
+import { IndexRow, openItem } from '@/components/ProductRow';
 import { Bottle, GlassShelf } from '@/components/shelf';
-import { AppText, ErrorState, LoadingState, Mast, PageTitle, Screen, Section } from '@/components/ui';
+import { AppText, Button, ErrorState, LoadingState, Mast, PageTitle, PillAction, Screen, Section } from '@/components/ui';
 import type { LibraryEntry } from '@/data/library';
 import { useLibrary, useShelf } from '@/data/queries';
 import { OWNERSHIP_STATUSES, ownershipLabel, type OwnershipStatus } from '@/domain/library';
@@ -43,7 +43,9 @@ export default function HomeScreen() {
   return (
     <Screen>
       <Mast left="Beauty shelf" right={`No. ${catalogNo(data.length)} / Private`} />
-      <PageTitle>{'My\nshelf'}</PageTitle>
+      <PageTitle action={<PillAction label="+ Add" accessibilityLabel="Add product" onPress={() => router.push('/add')} />}>
+        {'My\nshelf'}
+      </PageTitle>
 
       {library.isPending ? (
         <LoadingState label="Loading your shelf" />
@@ -53,34 +55,33 @@ export default function HomeScreen() {
         <>
           <View
             style={styles.shelves}
-            accessible
-            accessibilityLabel={
-              display.items.length
-                ? `${display.curated ? 'On your shelf' : 'Using now'}: ${display.items.map((e) => e.name).join(', ')}`
-                : 'Your shelf is empty'
-            }
+            accessibilityLabel={display.curated ? 'On your shelf' : 'Using now'}
           >
             {rows.map((items, r) => (
               <GlassShelf key={r}>
                 {items.map((e) => (
-                  <Bottle
+                  <Pressable
                     key={e.id}
-                    uri={e.imageUrl}
-                    category={e.category}
-                    name={e.name}
-                    sub={e.variant}
-                    photoHeight={104}
-                  />
+                    onPress={() => openItem(e.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={[e.brand, e.name, e.variant].filter(Boolean).join(', ')}
+                    style={({ pressed }) => pressed && styles.pressed}
+                  >
+                    <Bottle uri={e.imageUrl} category={e.category} name={e.name} sub={e.variant} photoHeight={104} />
+                  </Pressable>
                 ))}
               </GlassShelf>
             ))}
           </View>
           {!display.curated ? (
-            <AppText variant="bodySoft">
-              {display.items.length
-                ? 'Showing what you’re using. Arranging your own shelf comes in a later update.'
-                : 'Your library is where everything you own, want and finish lives. Adding products arrives in the next update.'}
-            </AppText>
+            display.items.length ? (
+              <AppText variant="bodySoft">Showing what you’re using. Arranging your own shelf comes in a later update.</AppText>
+            ) : (
+              <View style={styles.empty}>
+                <AppText variant="bodySoft">Your library is where everything you own, want and finish lives.</AppText>
+                <Button label="Add product" onPress={() => router.push('/add')} />
+              </View>
+            )
           ) : null}
 
           <View style={styles.counts}>
@@ -124,4 +125,5 @@ const styles = StyleSheet.create({
   count: { flex: 1, gap: space.xs, minHeight: 48 },
   countNumber: { ...type.title, fontFamily: fonts.displayMedium, fontVariant: ['tabular-nums'] },
   pressed: { opacity: 0.5 },
+  empty: { gap: space.lg },
 });

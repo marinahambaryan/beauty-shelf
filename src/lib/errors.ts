@@ -2,7 +2,15 @@
  * Turns Supabase / network failures into short, honest, user-facing messages.
  * The database raises stable tokens (e.g. 'version_conflict', 'shelf_full') that we map here.
  */
-export type AppErrorKind = 'network' | 'conflict' | 'shelf_full' | 'auth' | 'not_found' | 'validation' | 'unknown';
+export type AppErrorKind =
+  | 'network'
+  | 'conflict'
+  | 'shelf_full'
+  | 'auth'
+  | 'not_found'
+  | 'validation'
+  | 'photo'
+  | 'unknown';
 
 export type AppError = { kind: AppErrorKind; message: string };
 
@@ -18,6 +26,18 @@ export function toAppError(error: unknown): AppError {
   }
   if (message === 'version_conflict') {
     return { kind: 'conflict', message: 'This changed on another device. Reload to see the latest version.' };
+  }
+  if (message === 'photo_too_large' || /payload too large|exceeded the maximum allowed size/i.test(message)) {
+    return { kind: 'photo', message: 'That photo is over 5 MB. Choose a smaller one.' };
+  }
+  if (/mime type .* is not supported|invalid_mime_type/i.test(message)) {
+    return { kind: 'photo', message: 'That file type isn’t supported. Use a JPG, PNG, WebP or HEIC photo.' };
+  }
+  if (message === 'camera_permission') {
+    return {
+      kind: 'photo',
+      message: 'Beauty Shelf can’t use the camera. Allow camera access in Settings, or choose a photo instead.',
+    };
   }
   if (message === 'shelf_full') {
     return { kind: 'shelf_full', message: 'Your shelf holds up to 12 products. Remove or replace one first.' };
