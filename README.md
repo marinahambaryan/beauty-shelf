@@ -12,12 +12,19 @@ Expo (SDK 58) + React Native + TypeScript · Supabase (Auth, Postgres + RLS, Sto
 
 Prerequisites: Node 20+, the Supabase CLI (installed as a dev dependency via `npx supabase`), Docker for the local Supabase stack.
 
+**Quick start** (Docker/OrbStack must be running):
+```bash
+./scripts/setup-local.sh    # installs, starts Supabase, migrates + seeds, writes .env.local, runs all tests
+npm start                   # then press i / a / w
+```
+
+Manual equivalent:
 ```bash
 npm install
 npx supabase start          # local Postgres, Auth, Storage, Studio
 npx supabase db reset       # applies supabase/migrations + supabase/seed.sql
 cp .env.example .env.local  # paste the API URL and anon key printed by `supabase start`
-npm start                   # then press i / a / w
+npm start
 ```
 
 Native modules are SDK 58 builds; if Expo Go for SDK 58 isn't available on your device yet, use a development build: `npx expo run:ios` or `npx expo run:android`.
@@ -42,7 +49,7 @@ Locally, `npx supabase functions serve` runs it.
 `npm run test:db` defaults to `postgresql://postgres:postgres@localhost:5432/postgres` (override with `TEST_DB_ADMIN_URL`). Against a running local Supabase instead:
 ```bash
 npx supabase db reset
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres SKIP_DB_BUILD=1 npm run test:db
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:55322/postgres SKIP_DB_BUILD=1 npm run test:db
 ```
 
 ## Layout

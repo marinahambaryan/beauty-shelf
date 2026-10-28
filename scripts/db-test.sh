@@ -4,7 +4,7 @@
 #
 # Plain PostgreSQL (default):  TEST_DB_ADMIN_URL=postgresql://postgres:postgres@localhost:5432/postgres npm run test:db
 # Local Supabase stack:        run `supabase db reset` first, then
-#                              DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres SKIP_DB_BUILD=1 npm run test:db
+#                              DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:55322/postgres SKIP_DB_BUILD=1 npm run test:db
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
