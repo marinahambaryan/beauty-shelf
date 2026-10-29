@@ -52,7 +52,8 @@
     "test:db": "./scripts/db-test.sh",
     "check": "npm run typecheck && npm run lint && npm test",
     "db:types": "supabase gen types typescript --local --schema public > src/data/database.types.ts",
-    "setup": "./scripts/setup-local.sh"
+    "setup": "./scripts/setup-local.sh",
+    "demo:user": "node scripts/create-demo-user.mjs"
   },
   "private": true,
   "jest": {
