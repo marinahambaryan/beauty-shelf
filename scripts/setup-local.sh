@@ -38,6 +38,8 @@ fi
 
 step "Applying migrations and seed catalog"
 npx supabase db reset
+# Catalogue packshots in supabase/catalog-images (bucket declared in config.toml).
+npx supabase seed buckets
 
 step "Writing .env.local"
 STATUS_ENV=$(npx supabase status -o env 2>/dev/null)

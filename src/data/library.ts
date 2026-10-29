@@ -1,5 +1,6 @@
 import type { Supabase } from '@/lib/supabase';
 import type { PersonalProductInput } from '@/domain/validation';
+import { catalogImageUrl } from './images';
 import { removePhotos, signPhotos, uploadPhoto } from './photos';
 import type {
   OwnershipStatus,
@@ -76,7 +77,7 @@ export async function listLibrary(db: Supabase): Promise<LibraryEntry[]> {
         name: v.products.name,
         variant: v.label,
         category: v.products.category,
-        imageUrl: v.image_url ?? v.products.image_url,
+        imageUrl: catalogImageUrl(v.image_url ?? v.products.image_url),
         imagePath: null,
       };
     }

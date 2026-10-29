@@ -2,6 +2,7 @@ import { toAppError } from '@/lib/errors';
 import type { Supabase } from '@/lib/supabase';
 import { addManually, setPhoto, updateLibraryItem, type LibraryEntry } from '../library';
 
+import { catalogImageUrl } from '../images';
 import { MAX_PHOTO_BYTES, newPhotoPath } from '../photos';
 
 /**
@@ -173,5 +174,18 @@ describe('setPhoto', () => {
 describe('newPhotoPath', () => {
   it('lives in the owner’s folder', () => {
     expect(newPhotoPath('user-1', 0, 0.5)).toMatch(/^user-1\/0-[a-z0-9]+\.jpg$/);
+  });
+});
+
+describe('catalogImageUrl', () => {
+  it('resolves bucket paths against the configured project', () => {
+    expect(catalogImageUrl('catalog-images/a.webp', 'http://192.168.1.2:55321/')).toBe(
+      'http://192.168.1.2:55321/storage/v1/object/public/catalog-images/a.webp',
+    );
+  });
+  it('keeps full URLs and ignores blanks', () => {
+    expect(catalogImageUrl('https://img.example/a.jpg', 'http://x')).toBe('https://img.example/a.jpg');
+    expect(catalogImageUrl('  ', 'http://x')).toBeNull();
+    expect(catalogImageUrl('catalog-images/a.webp', null)).toBeNull();
   });
 });

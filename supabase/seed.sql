@@ -1,9 +1,11 @@
 -- Beauty Shelf — development seed catalog.
 -- Real, widely sold products, entered by hand as plain facts: brand, product name,
 -- category and the shade or size names the brands themselves publish. Nothing here is
--- licensed data or scraped, and no images are seeded — brand and retailer product photos
--- are copyrighted. Products show a neutral placeholder until a photo exists (a user's
--- own photo, or a properly licensed image source added later; see DECISIONS.md D11).
+-- licensed data or scraped.
+-- Images: only the five skincare products at the end have one. Those packshots were
+-- supplied by the app's owner for local development (supabase/catalog-images); they are
+-- the brands' photos, so a public release needs the brands' permission or a licensed
+-- source (DECISIONS.md D11, D16). Everything else shows the neutral placeholder.
 -- Descriptions say what a product is, never what it does for skin or hair.
 -- The UUIDs are stable: the database tests refer to some of them.
 
@@ -22,7 +24,11 @@ insert into public.brands (id, name) values
   ('b0000000-0000-4000-8000-000000000012', 'Olaplex'),
   ('b0000000-0000-4000-8000-000000000013', 'Bumble and bumble'),
   ('b0000000-0000-4000-8000-000000000014', 'Aesop'),
-  ('b0000000-0000-4000-8000-000000000015', 'Shu Uemura')
+  ('b0000000-0000-4000-8000-000000000015', 'Shu Uemura'),
+  ('b0000000-0000-4000-8000-000000000016', 'Dr. Althea'),
+  ('b0000000-0000-4000-8000-000000000017', 'Purito Seoul'),
+  ('b0000000-0000-4000-8000-000000000018', 'Round Lab'),
+  ('b0000000-0000-4000-8000-000000000019', 'Anua')
 on conflict (id) do nothing;
 
 insert into public.products (id, brand_id, name, category, description) values
@@ -41,6 +47,24 @@ insert into public.products (id, brand_id, name, category, description) values
   ('a0000000-0000-4000-8000-000000000013', 'b0000000-0000-4000-8000-000000000013', 'Surf Spray', 'haircare', 'Texturising hair spray.'),
   ('a0000000-0000-4000-8000-000000000014', 'b0000000-0000-4000-8000-000000000014', 'Resurrection Aromatique Hand Balm', 'body', 'Hand balm.'),
   ('a0000000-0000-4000-8000-000000000015', 'b0000000-0000-4000-8000-000000000015', 'Eyelash Curler', 'tools', 'Eyelash curler.')
+on conflict (id) do nothing;
+
+-- Products with a packshot. image_url is a path in the public catalog-images bucket.
+insert into public.products (id, brand_id, name, category, description, image_url) values
+  ('a0000000-0000-4000-8000-000000000016', 'b0000000-0000-4000-8000-000000000016', '345 Relief Cream', 'skincare', 'Face cream, 50 ml tube.', 'catalog-images/dr-althea-345-relief-cream.webp'),
+  ('a0000000-0000-4000-8000-000000000017', 'b0000000-0000-4000-8000-000000000017', 'Mighty Bamboo Panthenol Cream', 'skincare', 'Face cream, 100 ml tube.', 'catalog-images/purito-mighty-bamboo-panthenol-cream.webp'),
+  ('a0000000-0000-4000-8000-000000000018', 'b0000000-0000-4000-8000-000000000018', '1025 Dokdo Toner', 'skincare', 'Toner, 200 ml bottle.', 'catalog-images/round-lab-1025-dokdo-toner.webp'),
+  ('a0000000-0000-4000-8000-000000000019', 'b0000000-0000-4000-8000-000000000018', '1025 Dokdo Cleanser', 'skincare', 'Foaming facial cleanser, 150 ml tube.', 'catalog-images/round-lab-1025-dokdo-cleanser.webp'),
+  ('a0000000-0000-4000-8000-000000000020', 'b0000000-0000-4000-8000-000000000019', 'Azelaic Acid 10 Hyaluron Redness Soothing Serum', 'skincare', 'Face serum, 30 ml dropper bottle.', 'catalog-images/anua-azelaic-acid-10-hyaluron-serum.webp')
+on conflict (id) do update set image_url = excluded.image_url;
+
+-- Their single (default) variants get stable ids so scripts and tests can refer to them.
+insert into public.product_variants (id, product_id, is_default) values
+  ('c0000000-0000-4000-8000-000000001601', 'a0000000-0000-4000-8000-000000000016', true),
+  ('c0000000-0000-4000-8000-000000001701', 'a0000000-0000-4000-8000-000000000017', true),
+  ('c0000000-0000-4000-8000-000000001801', 'a0000000-0000-4000-8000-000000000018', true),
+  ('c0000000-0000-4000-8000-000000001901', 'a0000000-0000-4000-8000-000000000019', true),
+  ('c0000000-0000-4000-8000-000000002001', 'a0000000-0000-4000-8000-000000000020', true)
 on conflict (id) do nothing;
 
 -- Shaded / sized products get named variants (shade and size names as the brands publish them).

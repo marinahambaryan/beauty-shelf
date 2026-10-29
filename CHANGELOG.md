@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 — Catalogue images (29 Oct 2026)
+- Five skincare products with packshots: Dr. Althea 345 Relief Cream, Purito Seoul Mighty Bamboo Panthenol Cream, Round Lab 1025 Dokdo Toner and Cleanser, Anua Azelaic Acid 10 Hyaluron Redness Soothing Serum.
+- Public `catalog-images` bucket; image paths resolved against the configured Supabase URL (D16).
+- Search results show a thumbnail. `npm run demo:user` adds the new products too.
+
 ## 0.3.0 — Milestone 2: adding products (28 Oct 2026)
 
 ### Added

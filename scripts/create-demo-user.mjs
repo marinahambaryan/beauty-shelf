@@ -21,6 +21,12 @@ const ITEMS = [
   ['c0000000-0000-4000-8000-000000001001', 'owned', 'unopened', null], // Black Saffron — 50 ml
   ['c0000000-0000-4000-8000-000000000302', 'wishlist', null, 'Try in store first.'], // Double Wear — 1W2 Sand
   ['c0000000-0000-4000-8000-000000000501', 'finished', null, null], // Dipbrow — Taupe
+  // The products with packshots, so Home and Library show real images.
+  ['c0000000-0000-4000-8000-000000001701', 'owned', 'using', null], // Purito Mighty Bamboo Panthenol Cream
+  ['c0000000-0000-4000-8000-000000001801', 'owned', 'using', null], // Round Lab 1025 Dokdo Toner
+  ['c0000000-0000-4000-8000-000000001901', 'owned', 'using', null], // Round Lab 1025 Dokdo Cleanser
+  ['c0000000-0000-4000-8000-000000002001', 'owned', 'using', null], // Anua Azelaic Acid serum
+  ['c0000000-0000-4000-8000-000000001601', 'wishlist', null, null], // Dr. Althea 345 Relief Cream
 ];
 
 const env = Object.fromEntries(

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Bottle } from '@/components/shelf';
 import { AppText, Button, EmptyState, ErrorState, LoadingState, Mast, PageTitle, TextAction, TextField, TopBar } from '@/components/ui';
 import type { CatalogSearchResult } from '@/data/catalog';
 import { useCatalogSearch } from '@/data/queries';
@@ -115,6 +116,9 @@ function ResultRow({ result }: { result: CatalogSearchResult }) {
       accessibilityLabel={[result.brand, result.name, categoryLabel[result.category], choices].filter(Boolean).join(', ')}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
+      <View style={styles.thumb}>
+        <Bottle uri={result.imageUrl} category={result.category} name={result.name} scale={0.62} photoHeight={52} />
+      </View>
       <View style={styles.rowText}>
         <AppText variant="small">{result.brand}</AppText>
         <AppText variant="name" numberOfLines={2}>
@@ -146,5 +150,6 @@ const styles = StyleSheet.create({
     borderColor: colors.rule,
   },
   rowText: { flex: 1, gap: 3 },
+  thumb: { width: 44, height: 56, alignItems: 'center', justifyContent: 'flex-end' },
   pressed: { opacity: 0.5 },
 });

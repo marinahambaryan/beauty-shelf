@@ -1,5 +1,6 @@
 import type { Supabase } from '@/lib/supabase';
 import type { ProductCategory } from '@/domain/library';
+import { catalogImageUrl } from './images';
 
 export type CatalogSearchResult = {
   productId: string;
@@ -55,7 +56,7 @@ export function supabaseCatalog(db: Supabase): CatalogProvider {
         name: r.product_name,
         brand: r.brand_name,
         category: r.category,
-        imageUrl: r.image_url ?? null,
+        imageUrl: catalogImageUrl(r.image_url),
         variantCount: r.variant_count,
         defaultVariantId: r.variant_count === 1 ? (r.default_variant_id ?? null) : null,
       }));
@@ -77,7 +78,7 @@ export function supabaseCatalog(db: Supabase): CatalogProvider {
         brand: data.brands?.name ?? '',
         category: data.category,
         description: data.description,
-        imageUrl: data.image_url,
+        imageUrl: catalogImageUrl(data.image_url),
         variants: [...data.product_variants]
           .sort((a, b) => a.sort_order - b.sort_order)
           .map((v) => ({
@@ -85,7 +86,7 @@ export function supabaseCatalog(db: Supabase): CatalogProvider {
             label: v.label,
             shadeName: v.shade_name,
             sizeLabel: v.size_label,
-            imageUrl: v.image_url,
+            imageUrl: catalogImageUrl(v.image_url),
             isDefault: v.is_default,
           })),
       };
