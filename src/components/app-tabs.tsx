@@ -1,5 +1,5 @@
 import { TabList, TabSlot, TabTrigger, Tabs, type TabTriggerSlotProps } from 'expo-router/ui';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, space } from '@/theme/tokens';
@@ -14,19 +14,18 @@ export default function AppTabs() {
   return (
     <Tabs style={styles.root}>
       <TabSlot />
-      <View pointerEvents="box-none" style={[styles.dock, { bottom: Math.max(insets.bottom, space.lg) + space.sm }]}>
-        <TabList style={styles.bar}>
-          <TabTrigger name="(home)" href="/" asChild>
-            <TabButton icon="home" label="Home" />
-          </TabTrigger>
-          <TabTrigger name="search" href="/search" asChild>
-            <TabButton icon="search" label="Search" />
-          </TabTrigger>
-          <TabTrigger name="profile" href="/profile" asChild>
-            <TabButton icon="profile" label="Profile" />
-          </TabTrigger>
-        </TabList>
-      </View>
+      {/* TabList must stay a direct child of Tabs: that is where the router finds the tabs. */}
+      <TabList style={[styles.bar, { bottom: Math.max(insets.bottom, space.lg) + space.sm }]}>
+        <TabTrigger name="(home)" href="/" asChild>
+          <TabButton icon="home" label="Home" />
+        </TabTrigger>
+        <TabTrigger name="search" href="/search" asChild>
+          <TabButton icon="search" label="Search" />
+        </TabTrigger>
+        <TabTrigger name="profile" href="/profile" asChild>
+          <TabButton icon="profile" label="Profile" />
+        </TabTrigger>
+      </TabList>
     </Tabs>
   );
 }
@@ -48,8 +47,10 @@ function TabButton({ icon, label, isFocused, ref, ...props }: TabTriggerSlotProp
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.ground },
-  dock: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   bar: {
+    position: 'absolute',
+    left: '50%',
+    transform: [{ translateX: '-50%' }],
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs,
