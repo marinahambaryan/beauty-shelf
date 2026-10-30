@@ -1,9 +1,8 @@
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon } from '@/components/icons';
-import { PhotoField } from '@/components/photo-field';
 import { RatingInput } from '@/components/rating';
 import { Bottle } from '@/components/shelf';
 import {
@@ -22,10 +21,9 @@ import {
   TextField,
   TopBar,
 } from '@/components/ui';
-import { ownPhotoPath, type LibraryEntry } from '@/data/library';
-import { SHELF_CAPACITY } from '@/data/collections';
-import { useDeleteItem, useSaveShelf, useSetPhoto, useUpdateItem } from '@/data/mutations';
-import { useLibraryItem, useShelf } from '@/data/queries';
+import type { LibraryEntry } from '@/data/library';
+import { useDeleteItem, useUpdateItem } from '@/data/mutations';
+import { useLibraryItem } from '@/data/queries';
 import {
   categoryLabel,
   itemPatch,
@@ -119,7 +117,6 @@ function Editor({
   const [errors, setErrors] = useState<{ notes?: string; finishedAt?: string }>({});
   const [confirmInline, setConfirmInline] = useState(false);
   const update = useUpdateItem();
-  const photo = useSetPhoto();
   const remove = useDeleteItem();
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
@@ -164,53 +161,46 @@ function Editor({
 
   return (
     <Screen bottomInset contentStyle={styles.content}>
-      <PhotoField
-        height={400}
-        uri={entry.imageUrl}
-        removable={Boolean(ownPhotoPath(entry))}
-        onChange={(uri) => photo.mutate({ entry, uri })}
-        busy={photo.isPending}
-        busyLabel={photo.variables?.uri ? 'Uploading photo' : 'Removing photo'}
-        error={photo.isError ? toAppError(photo.error).message : null}
-        placeholder={<Bottle uri={null} category={entry.category} name={entry.name} sub={entry.variant} scale={2.2} />}
-        overlay={
-          <View style={styles.heroBack}>
-            <IconButton icon="back" tone="white" size={40} iconSize={20} onPress={() => goBack()} accessibilityLabel="Back" />
-          </View>
-        }
-      />
+      <View style={styles.hero}>
+        <View accessible={false} importantForAccessibility="no-hide-descendants" style={styles.heroArt}>
+          {entry.imageUrl ? (
+            <Image source={{ uri: entry.imageUrl }} style={StyleSheet.absoluteFill} contentFit="contain" transition={150} />
+          ) : (
+            <Bottle uri={null} category={entry.category} name={entry.name} sub={entry.variant} scale={2.2} />
+          )}
+        </View>
+        <View style={styles.heroBack}>
+          <IconButton icon="back" tone="white" size={40} iconSize={20} onPress={() => goBack()} accessibilityLabel="Back" />
+        </View>
+      </View>
 
-      <View style={styles.actions}>
-        <View style={styles.actionsLeft}>
-          <IconButton
-            icon="plus"
-            onPress={() => router.push({ pathname: '/collection/pick', params: { entry: entry.id } })}
-            accessibilityLabel="Save to a collection or the shopping list"
-          />
-          <ShelfToggle entryId={entry.id} name={entry.name} />
+      <View style={styles.titleRow}>
+        <View style={styles.title}>
+          <AppText variant="heading">{entry.name}</AppText>
+          <AppText variant="bodySoft">
+            {[entry.brand || null, entry.variant, entry.source === 'personal' ? 'Added manually' : categoryLabel[entry.category]]
+              .filter(Boolean)
+              .join(' · ')}
+          </AppText>
         </View>
         <Pressable
-          onPress={() => {
-            const i = OWNERSHIP_STATUSES.indexOf(form.ownershipStatus);
-            set('ownershipStatus', OWNERSHIP_STATUSES[(i + 1) % OWNERSHIP_STATUSES.length] ?? 'owned');
-          }}
+          onPress={() => router.push({ pathname: '/collection/pick', params: { entry: entry.id } })}
           accessibilityRole="button"
-          accessibilityLabel={`Status: ${ownershipLabel[form.ownershipStatus]}. Change status`}
-          style={({ pressed }) => [styles.status, pressed && styles.pressed]}
+          accessibilityLabel="Save to a collection or the shopping list"
+          style={({ pressed }) => [styles.save, pressed && styles.pressed]}
         >
-          <Text style={styles.statusLabel}>{ownershipLabel[form.ownershipStatus]}</Text>
-          <Icon name="chevronDown" size={16} color={colors.ground} strokeWidth={2.4} />
+          <Text style={styles.saveLabel}>Save</Text>
         </Pressable>
       </View>
 
-      <View style={styles.title}>
-        <AppText variant="heading">{entry.name}</AppText>
-        <AppText variant="bodySoft">
-          {[entry.brand || null, entry.variant, entry.source === 'personal' ? 'Added manually' : categoryLabel[entry.category]]
-            .filter(Boolean)
-            .join(' · ')}
-        </AppText>
-      </View>
+      <Section label="Status">
+        <Chips
+          options={OWNERSHIP_STATUSES.map((s) => ({ value: s, label: ownershipLabel[s] }))}
+          value={form.ownershipStatus}
+          onChange={(s) => set('ownershipStatus', s)}
+          accessibilityLabel="Status"
+        />
+      </Section>
 
       {notice && !dirty ? <Notice tone="info">{notice}</Notice> : null}
       {leavingOwned ? (
@@ -315,40 +305,17 @@ function Editor({
   );
 }
 
-/** Puts the product on the shelf, or takes it off. Saves straight away, like a pin. */
-function ShelfToggle({ entryId, name }: { entryId: string; name: string }) {
-  const { shelf, isPending } = useShelf();
-  const save = useSaveShelf();
-  const placements = (shelf?.items ?? []).flatMap((i) => (i.libraryItemId ? [{ libraryItemId: i.libraryItemId, note: i.note }] : []));
-  const onShelf = placements.some((p) => p.libraryItemId === entryId);
-  const full = !onShelf && placements.length >= SHELF_CAPACITY;
-  const toggle = () =>
-    save.mutate({
-      shelf: shelf ? { id: shelf.id, version: shelf.version } : null,
-      placements: onShelf ? placements.filter((p) => p.libraryItemId !== entryId) : [...placements, { libraryItemId: entryId, note: null }],
-    });
-  return (
-    <View style={styles.shelfToggle}>
-      <IconButton
-        icon={onShelf ? 'check' : 'shelf'}
-        tone={onShelf ? 'ink' : 'tile'}
-        onPress={toggle}
-        disabled={isPending || save.isPending || full}
-        selected={onShelf}
-        accessibilityLabel={onShelf ? `Take ${name} off your shelf` : `Put ${name} on your shelf`}
-      />
-      <AppText variant="bodySoft">{full ? 'Shelf is full' : onShelf ? 'On your shelf' : 'Add to shelf'}</AppText>
-      {save.isError ? <AppText variant="small" style={styles.danger}>{toAppError(save.error).message}</AppText> : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   content: { gap: space.lg },
-  title: { gap: space.xs },
+  title: { flex: 1, gap: space.xs },
   pressed: { opacity: 0.55 },
   danger: { color: colors.danger },
+  hero: { height: 400, borderRadius: radius.xl, backgroundColor: colors.tile, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  heroArt: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', margin: space.xl },
   heroBack: { position: 'absolute', top: 12, left: 12 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
+  save: { height: 44, paddingHorizontal: 20, borderRadius: 22, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  saveLabel: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ground },
   actions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
   actionsLeft: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexShrink: 1 },
   shelfToggle: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexShrink: 1, flexWrap: 'wrap' },
