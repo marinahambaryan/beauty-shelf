@@ -68,7 +68,8 @@ export default function AddProductScreen() {
     setNoteError(undefined);
     add.mutate(
       { variantId: variant.id, status, notes: parsed.data },
-      { onSuccess: (r) => openItem(r.libraryItemId, r.created ? 'added' : 'existing') },
+      // Back to where you were (Search shows it as added); no second product page.
+      { onSuccess: () => goBack('/search') },
     );
   };
 

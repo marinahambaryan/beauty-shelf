@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { CatalogSearchResult } from '@/data/catalog';
 import type { LibraryEntry } from '@/data/library';
+import { useAddVariant } from '@/data/mutations';
 import { useCatalogSearch, useLibrary } from '@/data/queries';
 import { CATEGORIES, categoryLabel, ownershipLabel, type ProductCategory } from '@/domain/library';
 import { toAppError } from '@/lib/errors';
@@ -14,7 +15,7 @@ import { colors, fonts, radius, space } from '@/theme/tokens';
 import { Icon } from './icons';
 import { statusText } from './ProductRow';
 import { Bottle } from './shelf';
-import { AppText, Button, Chips, EmptyState, ErrorState, IconButton, LoadingState, Screen, SearchField, TopBar } from './ui';
+import { AppText, Button, Chips, EmptyState, ErrorState, IconButton, LoadingState, Notice, Screen, SearchField, TopBar } from './ui';
 
 const TILE_HEIGHTS = [236, 196, 216, 206];
 
@@ -41,6 +42,13 @@ export function CatalogSearch({ modal = false }: { modal?: boolean }) {
   }, [library.data]);
 
   const addManually = () => router.push({ pathname: '/add/manual', params: query.trim() ? { name: query.trim() } : {} });
+  const quickAdd = useAddVariant();
+  // + adds a single-shade product straight away as Owned; with shades or sizes, pick one first.
+  const add = (r: CatalogSearchResult) => {
+    if (settled) remember(settled);
+    if (r.defaultVariantId) quickAdd.mutate({ variantId: r.defaultVariantId, status: 'owned', notes: null });
+    else router.push({ pathname: '/add/[productId]', params: { productId: r.productId } });
+  };
   const open = (r: CatalogSearchResult) => {
     if (settled) remember(settled);
     const existing = inLibrary.get(r.productId);
@@ -134,6 +142,7 @@ export function CatalogSearch({ modal = false }: { modal?: boolean }) {
         />
       ) : (
         <View style={styles.results}>
+          {quickAdd.isError ? <Notice>{toAppError(quickAdd.error).message}</Notice> : null}
           <Text style={styles.count}>
             {settled ? `${results.length} ${results.length === 1 ? 'result' : 'results'}` : 'In the catalogue'}
           </Text>
@@ -147,6 +156,8 @@ export function CatalogSearch({ modal = false }: { modal?: boolean }) {
                     height={TILE_HEIGHTS[(i * 2 + c) % TILE_HEIGHTS.length] ?? 210}
                     existing={inLibrary.get(r.productId)}
                     onPress={() => open(r)}
+                    onAdd={() => add(r)}
+                    adding={quickAdd.isPending && quickAdd.variables?.variantId === r.defaultVariantId}
                   />
                 ))}
               </View>
@@ -163,44 +174,60 @@ function ResultTile({
   height,
   existing,
   onPress,
+  onAdd,
+  adding,
 }: {
   result: CatalogSearchResult;
   height: number;
   existing: LibraryEntry | undefined;
   onPress: () => void;
+  onAdd: () => void;
+  adding: boolean;
 }) {
   const label = [result.brand, result.name, existing ? `in your library, ${ownershipLabel[existing.ownershipStatus]}` : null]
     .filter(Boolean)
     .join(', ');
+  // The + sits beside the photo button, not inside it: a button can't contain a button.
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint={existing ? 'Opens it in your library' : 'Choose how to add it'}
-      style={({ pressed }) => [styles.tileWrap, pressed && styles.pressed]}
-    >
-      <View style={[styles.tile, { height }]}>
-        <Bottle uri={result.imageUrl} category={result.category} name={result.name} scale={1.4} photoHeight={height - 34} />
-        {existing ? (
-          <View style={styles.tileStatus}>
-            <Text style={styles.tileStatusLabel}>{statusText(existing)}</Text>
-          </View>
-        ) : (
-          <View style={styles.tileAdd}>
-            <Icon name="plus" size={18} strokeWidth={2.6} />
-          </View>
-        )}
-      </View>
-      <View style={styles.tileText}>
-        <AppText variant="name" numberOfLines={2}>
-          {result.name}
-        </AppText>
-        <AppText variant="small" numberOfLines={1}>
-          {existing ? `${result.brand} · in your library` : result.brand}
-        </AppText>
-      </View>
-    </Pressable>
+    <View style={styles.tileWrap}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityHint={existing ? 'Opens it in your library' : 'Opens the product'}
+        style={({ pressed }) => [styles.tileWrap, pressed && styles.pressed]}
+      >
+        <View style={[styles.tile, { height }]}>
+          <Bottle uri={result.imageUrl} category={result.category} name={result.name} scale={1.4} photoHeight={height - 34} />
+          {existing ? (
+            <View style={styles.tileStatus}>
+              <Text style={styles.tileStatusLabel}>{statusText(existing)}</Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.tileText}>
+          <AppText variant="name" numberOfLines={2}>
+            {result.name}
+          </AppText>
+          <AppText variant="small" numberOfLines={1}>
+            {existing ? `${result.brand} · in your library` : result.brand}
+          </AppText>
+        </View>
+      </Pressable>
+      {existing ? null : (
+        <Pressable
+          onPress={onAdd}
+          disabled={adding}
+          accessibilityRole="button"
+          accessibilityLabel={`Add ${result.name} to your library`}
+          accessibilityHint={result.defaultVariantId ? 'Adds it as Owned' : 'Choose a shade or size first'}
+          hitSlop={6}
+          style={({ pressed }) => [styles.tileAdd, { top: height - 50 }, pressed && styles.pressed]}
+        >
+          {adding ? <ActivityIndicator color={colors.ink} /> : <Icon name="plus" size={18} strokeWidth={2.6} />}
+        </Pressable>
+      )}
+    </View>
   );
 }
 
@@ -225,7 +252,6 @@ const styles = StyleSheet.create({
   tileAdd: {
     position: 'absolute',
     right: 10,
-    bottom: 10,
     width: 40,
     height: 40,
     borderRadius: 20,
