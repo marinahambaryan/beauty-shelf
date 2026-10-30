@@ -8,13 +8,15 @@ import {
   TextInput,
   View,
   type ScrollViewProps,
+  type StyleProp,
   type TextInputProps,
   type TextProps,
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, fonts, radius, space, touchTarget, type } from '@/theme/tokens';
+import { colors, fonts, radius, space, tabBarClearance, touchTarget, type } from '@/theme/tokens';
+import { Icon, type IconName } from './icons';
 
 // ---------------------------------------------------------------------------
 // Typography
@@ -22,7 +24,7 @@ import { colors, fonts, radius, space, touchTarget, type } from '@/theme/tokens'
 type Variant = keyof typeof type;
 
 export function AppText({ variant = 'body', style, ...rest }: TextProps & { variant?: Variant }) {
-  const role = variant === 'display' || variant === 'title' ? 'header' : undefined;
+  const role = variant === 'display' || variant === 'title' || variant === 'heading' ? 'header' : undefined;
   return <Text accessibilityRole={role} style={[type[variant], style]} {...rest} />;
 }
 
@@ -30,8 +32,8 @@ export function AppText({ variant = 'body', style, ...rest }: TextProps & { vari
 // Page furniture
 // ---------------------------------------------------------------------------
 /**
- * A scrolling page. There is no navigation bar in this design: each page opens with its
- * mast line and a big title, so the page itself owns the top safe area.
+ * A scrolling page. There is no navigation bar: each page draws its own title, so the
+ * page owns the top safe area. Tab pages leave room for the floating tab bar.
  */
 export function Screen({
   children,
@@ -40,8 +42,8 @@ export function Screen({
   ...rest
 }: ScrollViewProps & {
   children: ReactNode;
-  contentStyle?: ViewStyle;
-  /** Pages outside the tabs (no tab bar below) also clear the home indicator. */
+  contentStyle?: StyleProp<ViewStyle>;
+  /** Pages pushed over the tabs (no tab bar below) only clear the home indicator. */
   bottomInset?: boolean;
 }) {
   const insets = useSafeAreaInsets();
@@ -53,7 +55,7 @@ export function Screen({
       contentContainerStyle={[
         styles.screenContent,
         { paddingTop: insets.top + space.xl },
-        bottomInset && { paddingBottom: insets.bottom + space.xxxl },
+        { paddingBottom: bottomInset ? insets.bottom + space.xxxl : tabBarClearance + insets.bottom },
         contentStyle,
       ]}
       {...rest}
@@ -63,38 +65,81 @@ export function Screen({
   );
 }
 
-/** The small mono line at the top of every page: "BEAUTY SHELF ........ NO. 069 / PRIVATE". */
-export function Mast({ left, right }: { left: string; right?: string }) {
+/** A round icon button: grey by default ("tile"), plain, white over images, or black when active. */
+export function IconButton({
+  icon,
+  onPress,
+  accessibilityLabel,
+  tone = 'tile',
+  size = 44,
+  iconSize = 22,
+  disabled = false,
+  selected,
+}: {
+  icon: IconName;
+  onPress: () => void;
+  accessibilityLabel: string;
+  tone?: 'tile' | 'plain' | 'white' | 'ink';
+  size?: number;
+  iconSize?: number;
+  disabled?: boolean;
+  selected?: boolean;
+}) {
+  const bg = tone === 'tile' ? colors.tile : tone === 'white' ? colors.ground : tone === 'ink' ? colors.ink : 'transparent';
   return (
-    <View style={styles.mast}>
-      <AppText variant="label">{left}</AppText>
-      {right ? <AppText variant="label" style={styles.soft}>{right}</AppText> : null}
-    </View>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled, selected }}
+      hitSlop={size < touchTarget ? (touchTarget - size) / 2 : 0}
+      style={({ pressed }) => [
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: bg },
+        styles.iconButton,
+        tone === 'white' && styles.raised,
+        pressed && styles.pressed,
+        disabled && styles.inactive,
+      ]}
+    >
+      <Icon name={icon} size={iconSize} color={tone === 'ink' ? colors.ground : colors.ink} strokeWidth={2} />
+    </Pressable>
   );
 }
 
 /**
- * The line above the mast on pages pushed over the tabs: "← BACK" on the left and an
- * optional action on the right. Words, not icons, like the rest of the design.
+ * The bar at the top of pages pushed over the tabs: a round back (or close) button,
+ * an optional centered title, and an optional action on the right.
  */
-export function TopBar({ onBack, backLabel = 'Back', right }: { onBack: () => void; backLabel?: string; right?: ReactNode }) {
+export function TopBar({
+  onBack,
+  backLabel = 'Back',
+  icon = 'back',
+  title,
+  right,
+}: {
+  onBack: () => void;
+  backLabel?: string;
+  icon?: 'back' | 'close';
+  title?: string;
+  right?: ReactNode;
+}) {
   return (
     <View style={styles.topBar}>
-      <Pressable
-        onPress={onBack}
-        accessibilityRole="button"
-        accessibilityLabel={backLabel}
-        hitSlop={space.sm}
-        style={({ pressed }) => [styles.topBarButton, pressed && styles.pressed]}
-      >
-        <AppText variant="label">← {backLabel}</AppText>
-      </Pressable>
-      {right}
+      <IconButton icon={icon} onPress={onBack} accessibilityLabel={backLabel} tone="plain" />
+      {title ? (
+        <AppText variant="section" style={styles.topBarTitle} accessibilityRole="header" numberOfLines={1}>
+          {title}
+        </AppText>
+      ) : (
+        <View style={styles.flex} />
+      )}
+      <View style={styles.topBarRight}>{right}</View>
     </View>
   );
 }
 
-/** A small mono text action: "+ ADD", "CHANGE PHOTO". Underlined so it reads as tappable. */
+/** A small text action: "Today", "Remove photo". */
 export function TextAction({
   label,
   onPress,
@@ -118,14 +163,12 @@ export function TextAction({
       hitSlop={space.xs}
       style={({ pressed }) => [styles.textAction, pressed && styles.pressed, disabled && styles.inactive]}
     >
-      <AppText variant="label" style={[styles.underline, tone === 'danger' && styles.danger]}>
-        {label}
-      </AppText>
+      <Text style={[styles.textActionLabel, tone === 'danger' && styles.danger]}>{label}</Text>
     </Pressable>
   );
 }
 
-/** The outlined pill that sits beside a page title: "+ ADD". */
+/** The outlined pill that sits beside a title: "New". */
 export function PillAction({ label, onPress, accessibilityLabel }: { label: string; onPress: () => void; accessibilityLabel?: string }) {
   return (
     <Pressable
@@ -134,16 +177,16 @@ export function PillAction({ label, onPress, accessibilityLabel }: { label: stri
       accessibilityLabel={accessibilityLabel ?? label}
       style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
     >
-      <AppText variant="label">{label}</AppText>
+      <Text style={styles.pillLabel}>{label}</Text>
     </Pressable>
   );
 }
 
 /** The oversized page title, with an optional action on the right. */
-export function PageTitle({ children, action }: { children: string; action?: ReactNode }) {
+export function PageTitle({ children, action, variant = 'display' }: { children: string; action?: ReactNode; variant?: 'display' | 'title' }) {
   return (
     <View style={styles.pageTitle}>
-      <AppText variant="display" style={styles.flex}>
+      <AppText variant={variant} style={styles.flex}>
         {children}
       </AppText>
       {action}
@@ -151,14 +194,16 @@ export function PageTitle({ children, action }: { children: string; action?: Rea
   );
 }
 
-/** A labelled block. The label is a mono line, like a section heading on a label. */
-export function Section({ label, right, footer, children }: { label?: string; right?: string; footer?: string; children: ReactNode }) {
+/** A titled block. */
+export function Section({ label, right, footer, children }: { label?: string; right?: ReactNode; footer?: string; children: ReactNode }) {
   return (
     <View style={styles.section}>
       {label ? (
         <View style={styles.sectionHead}>
-          <AppText variant="label">{label}</AppText>
-          {right ? <AppText variant="label" style={styles.soft}>{right}</AppText> : null}
+          <AppText variant="section" accessibilityRole="header">
+            {label}
+          </AppText>
+          {typeof right === 'string' ? <AppText variant="bodySoft">{right}</AppText> : right}
         </View>
       ) : null}
       {children}
@@ -167,34 +212,34 @@ export function Section({ label, right, footer, children }: { label?: string; ri
   );
 }
 
-/** A ruled mono row: label on the left, detail on the right. Tappable when `onPress` is set. */
+/** A plain row: title on the left, detail on the right, a chevron when it opens something. */
 export function Row({
   title,
   detail,
   tone = 'default',
   onPress,
   accessibilityLabel,
-  asTyped = false,
+  chevron = true,
 }: {
   title: string;
   detail?: string;
   tone?: 'default' | 'danger';
-  /** Keep the text's own case (emails, names someone typed) instead of label capitals. */
-  asTyped?: boolean;
   onPress?: () => void;
   accessibilityLabel?: string;
+  chevron?: boolean;
 }) {
   const label = accessibilityLabel ?? [title, detail].filter(Boolean).join(', ');
   const content = (
     <>
-      <AppText
-        variant={asTyped ? 'body' : 'label'}
-        style={[styles.flex, tone === 'danger' && styles.danger]}
-        numberOfLines={2}
-      >
+      <AppText variant="label" style={[styles.flex, tone === 'danger' && styles.danger]} numberOfLines={2}>
         {title}
       </AppText>
-      {detail ? <AppText variant="label" style={styles.soft} numberOfLines={1}>{detail}</AppText> : null}
+      {detail ? (
+        <AppText variant="bodySoft" numberOfLines={1}>
+          {detail}
+        </AppText>
+      ) : null}
+      {onPress && chevron && tone !== 'danger' ? <Icon name="chevronRight" size={18} strokeWidth={2} /> : null}
     </>
   );
   if (!onPress) {
@@ -205,12 +250,7 @@ export function Row({
     );
   }
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-    >
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
       {content}
     </Pressable>
   );
@@ -221,7 +261,7 @@ export function Row({
 // ---------------------------------------------------------------------------
 type ButtonVariant = 'primary' | 'secondary' | 'plain' | 'danger';
 
-/** Buttons read like the mockup's: mono capitals, 14px corners, solid or outlined in ink. */
+/** Pill buttons: solid black, outlined, plain text, or red for destructive actions. */
 export function Button({
   label,
   onPress,
@@ -255,11 +295,7 @@ export function Button({
         inactive && styles.inactive,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={v.fg} />
-      ) : (
-        <Text style={[styles.buttonLabel, { color: v.fg }, variant === 'plain' && styles.underline]}>{label}</Text>
-      )}
+      {loading ? <ActivityIndicator color={v.fg} /> : <Text style={[styles.buttonLabel, { color: v.fg }]}>{label}</Text>}
     </Pressable>
   );
 }
@@ -271,43 +307,48 @@ const buttonVariants: Record<ButtonVariant, { bg: string; fg: string; border: st
   danger: { bg: colors.danger, fg: colors.ground, border: colors.danger },
 };
 
-/** An underlined mono field, like the mockup's search line. */
+/** An outlined field with its label above, like the design's search bar. */
 export function TextField({
   label,
   error,
   hint,
   style,
   trailing,
-  prefix,
+  leading,
+  hideLabel = false,
   onFocus,
   onBlur,
   ...rest
-}: TextInputProps & { label: string; error?: string; hint?: string; trailing?: ReactNode; prefix?: string }) {
+}: TextInputProps & {
+  label: string;
+  error?: string;
+  hint?: string;
+  trailing?: ReactNode;
+  leading?: ReactNode;
+  /** The label is still read by screen readers. */
+  hideLabel?: boolean;
+}) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={styles.field}>
-      {prefix ? null : (
-        <AppText variant="small" style={styles.fieldLabel}>
+      {hideLabel ? null : (
+        <AppText variant="label" accessible={false}>
           {label}
         </AppText>
       )}
       <View
         style={[
-          styles.inputLine,
-          rest.multiline && styles.inputLineMultiline,
-          focused && styles.inputLineFocused,
-          error ? styles.inputLineError : null,
+          styles.inputBox,
+          rest.multiline && styles.inputBoxMultiline,
+          focused && styles.inputBoxFocused,
+          error ? styles.inputBoxError : null,
         ]}
       >
-        {prefix ? (
-          <AppText variant="label" accessible={false}>
-            {prefix}
-          </AppText>
-        ) : null}
+        {leading}
         <TextInput
           accessibilityLabel={label}
           accessibilityHint={error ?? hint}
-          placeholderTextColor={colors.inkSoft}
+          placeholderTextColor={colors.inkMuted}
           selectionColor={colors.ink}
           onFocus={(e) => {
             setFocused(true);
@@ -333,7 +374,57 @@ export function TextField({
   );
 }
 
-/** Password field with a SHOW / HIDE switch in words, not an icon. */
+/** The search bar: magnifier, input, a clear button while there is text, and an optional action. */
+export function SearchField({
+  value,
+  onChangeText,
+  label,
+  placeholder,
+  trailing,
+  autoFocus,
+  onSubmitEditing,
+}: {
+  value: string;
+  onChangeText: (v: string) => void;
+  label: string;
+  placeholder: string;
+  trailing?: ReactNode;
+  autoFocus?: boolean;
+  onSubmitEditing?: () => void;
+}) {
+  return (
+    <TextField
+      label={label}
+      hideLabel
+      placeholder={placeholder}
+      value={value}
+      onChangeText={onChangeText}
+      autoFocus={autoFocus}
+      autoCorrect={false}
+      autoCapitalize="none"
+      returnKeyType="search"
+      onSubmitEditing={onSubmitEditing}
+      leading={<Icon name="search" size={21} strokeWidth={1.9} />}
+      trailing={
+        value ? (
+          <Pressable
+            onPress={() => onChangeText('')}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+            hitSlop={10}
+            style={({ pressed }) => [styles.clear, pressed && styles.pressed]}
+          >
+            <Icon name="close" size={12} color={colors.ground} strokeWidth={3} />
+          </Pressable>
+        ) : (
+          trailing
+        )
+      }
+    />
+  );
+}
+
+/** Password field with a Show / Hide switch. */
 export function PasswordField(
   props: Omit<TextInputProps, 'secureTextEntry'> & { label: string; error?: string; hint?: string },
 ) {
@@ -352,20 +443,20 @@ export function PasswordField(
           hitSlop={space.sm}
           style={({ pressed }) => [styles.showButton, pressed && styles.pressed]}
         >
-          <AppText variant="small">{visible ? 'Hide' : 'Show'}</AppText>
+          <Text style={styles.textActionLabel}>{visible ? 'Hide' : 'Show'}</Text>
         </Pressable>
       }
     />
   );
 }
 
-/** Inline message for form-level errors and confirmations: a slip of label paper. */
+/** Inline message for form-level errors and confirmations. */
 export function Notice({ tone = 'error', children }: { tone?: 'error' | 'info'; children: ReactNode }) {
   return (
     <View
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
-      style={[styles.notice, { backgroundColor: tone === 'error' ? colors.dangerWash : colors.paper }]}
+      style={[styles.notice, { backgroundColor: tone === 'error' ? colors.dangerWash : colors.tile }]}
     >
       <AppText variant="body" style={tone === 'error' ? styles.danger : null} selectable>
         {children}
@@ -374,44 +465,85 @@ export function Notice({ tone = 'error', children }: { tone?: 'error' | 'info'; 
   );
 }
 
-/** "[ALL]  OWNED  WISHLIST  FINISHED": the selected option sits in brackets. */
-export function BracketTabs<T extends string>({
+/** Pill chips: the selected one is black. With `onClear`, tapping it again clears the choice. */
+export function Chips<T extends string>({
   options,
   value,
   onChange,
-  spread = true,
   onClear,
   accessibilityLabel,
+  scroll = false,
 }: {
   options: readonly { value: T; label: string }[];
   value: T | null;
   onChange: (v: T) => void;
-  spread?: boolean;
-  /** For optional choices: tapping the selected option again clears it. */
   onClear?: () => void;
   accessibilityLabel?: string;
+  scroll?: boolean;
+}) {
+  const chips = options.map((o) => {
+    const selected = o.value === value;
+    return (
+      <Pressable
+        key={o.value}
+        onPress={() => (selected && onClear ? onClear() : onChange(o.value))}
+        accessibilityRole={onClear ? 'radio' : 'tab'}
+        accessibilityState={onClear ? { checked: selected } : { selected }}
+        accessibilityLabel={o.label}
+        accessibilityHint={selected && onClear ? 'Tap again to clear' : undefined}
+        hitSlop={{ top: 4, bottom: 4 }}
+        style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && styles.pressed]}
+      >
+        <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]} numberOfLines={1}>
+          {o.label}
+        </Text>
+      </Pressable>
+    );
+  });
+  const role = onClear ? 'radiogroup' : 'tablist';
+  if (scroll) {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chips}
+        accessibilityRole={role}
+        accessibilityLabel={accessibilityLabel}
+      >
+        {chips}
+      </ScrollView>
+    );
+  }
+  return (
+    <View style={[styles.chips, styles.wrap]} accessibilityRole={role} accessibilityLabel={accessibilityLabel}>
+      {chips}
+    </View>
+  );
+}
+
+/** Centered word tabs with an underline under the current one: "Products   Collections". */
+export function UnderlineTabs<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
 }) {
   return (
-    <View
-      style={[styles.tabs, spread && styles.tabsSpread]}
-      accessibilityRole={onClear ? 'radiogroup' : 'tablist'}
-      accessibilityLabel={accessibilityLabel}
-    >
+    <View style={styles.underlineTabs} accessibilityRole="tablist">
       {options.map((o) => {
         const selected = o.value === value;
         return (
           <Pressable
             key={o.value}
-            onPress={() => (selected && onClear ? onClear() : onChange(o.value))}
-            accessibilityRole={onClear ? 'radio' : 'tab'}
-            accessibilityState={onClear ? { checked: selected } : { selected }}
-            accessibilityLabel={o.label}
-            accessibilityHint={selected && onClear ? 'Tap again to clear' : undefined}
-            style={styles.tab}
+            onPress={() => onChange(o.value)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            style={[styles.underlineTab, selected && styles.underlineTabSelected]}
           >
-            <Text style={[styles.tabLabel, selected && styles.tabSelected]} numberOfLines={1}>
-              {selected ? `[${o.label}]` : o.label}
-            </Text>
+            <Text style={styles.underlineTabLabel}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -433,7 +565,7 @@ export function LoadingState({ label = 'Loading' }: { label?: string }) {
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <View style={styles.state}>
-      <AppText variant="label">This didn’t load</AppText>
+      <AppText variant="section">This didn’t load</AppText>
       <AppText variant="bodySoft" selectable>
         {message}
       </AppText>
@@ -446,7 +578,7 @@ export function EmptyState({ art, title, body, action }: { art?: ReactNode; titl
   return (
     <View style={styles.state}>
       {art}
-      <AppText variant="label">{title}</AppText>
+      <AppText variant="section">{title}</AppText>
       <AppText variant="bodySoft">{body}</AppText>
       {action}
     </View>
@@ -454,75 +586,84 @@ export function EmptyState({ art, title, body, action }: { art?: ReactNode; titl
 }
 
 // ---------------------------------------------------------------------------
-// Browsers draw a focus ring around inputs; this design thickens the underline instead.
+// Browsers draw a focus ring around inputs; this design thickens the border instead.
 const webNoOutline = process.env.EXPO_OS === 'web' ? ({ outlineStyle: 'none' } as unknown as ViewStyle) : null;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  soft: { color: colors.inkSoft },
+  wrap: { flexWrap: 'wrap' },
   danger: { color: colors.danger },
-  underline: { textDecorationLine: 'underline' },
   screen: { flex: 1, backgroundColor: colors.ground },
-  screenContent: { paddingHorizontal: space.xl, paddingBottom: space.xxxl, gap: space.xl },
-  mast: { flexDirection: 'row', justifyContent: 'space-between', gap: space.md },
+  screenContent: { paddingHorizontal: space.xl, gap: space.xl },
   pageTitle: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.md },
   section: { gap: space.md },
-  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', gap: space.md },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
   row: {
-    minHeight: touchTarget,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    paddingVertical: space.sm + 2,
+    paddingVertical: space.sm,
     borderBottomWidth: 1,
     borderColor: colors.rule,
   },
-  pressed: { opacity: 0.5 },
+  pressed: { opacity: 0.55 },
   inactive: { opacity: 0.4 },
+  iconButton: { alignItems: 'center', justifyContent: 'center' },
+  raised: { boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)' },
   button: {
-    minHeight: 50,
+    minHeight: 48,
     paddingHorizontal: space.xl,
-    borderRadius: radius.md,
+    borderRadius: radius.full,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonPlain: { minHeight: touchTarget },
-  buttonLabel: { ...type.label, color: undefined, fontSize: 13, letterSpacing: 0.8 },
-  field: { gap: space.xs },
-  fieldLabel: { color: colors.inkSoft },
-  inputLine: {
-    minHeight: 44,
+  buttonLabel: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 20 },
+  field: { gap: space.sm },
+  inputBox: {
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
-    borderBottomWidth: 1,
-    borderColor: colors.ink,
-  },
-  inputLineMultiline: { alignItems: 'flex-start' },
-  inputLineFocused: { borderBottomWidth: 2 },
-  inputLineError: { borderColor: colors.danger },
-  input: { ...type.body, flex: 1, minHeight: 44, paddingVertical: space.sm },
-  inputMultiline: { minHeight: 88, textAlignVertical: 'top' },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md, marginBottom: -space.sm },
-  topBarButton: { minHeight: 44, justifyContent: 'center' },
-  textAction: { minHeight: 44, justifyContent: 'center' },
-  pill: {
-    minHeight: 44,
+    gap: space.md,
     paddingHorizontal: space.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.fieldBorder,
+    backgroundColor: colors.ground,
+  },
+  inputBoxMultiline: { alignItems: 'flex-start', paddingVertical: space.xs },
+  inputBoxFocused: { borderColor: colors.ink, borderWidth: 2, paddingHorizontal: space.lg - 0.5 },
+  inputBoxError: { borderColor: colors.danger },
+  input: { fontFamily: fonts.regular, fontSize: 16, color: colors.ink, flex: 1, minHeight: 48, paddingVertical: space.sm },
+  inputMultiline: { minHeight: 96, textAlignVertical: 'top' },
+  clear: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginHorizontal: -space.md, marginBottom: -space.sm },
+  topBarTitle: { flex: 1, textAlign: 'center' },
+  topBarRight: { minWidth: 44, alignItems: 'flex-end' },
+  textAction: { minHeight: touchTarget, justifyContent: 'center' },
+  textActionLabel: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
+  pill: {
+    height: 40,
+    paddingHorizontal: space.lg + 2,
     borderRadius: radius.full,
     borderWidth: 1.5,
     borderColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: space.xs,
   },
-  showButton: { minHeight: 44, justifyContent: 'center', paddingLeft: space.sm },
-  notice: { padding: space.lg, borderRadius: 10 },
-  tabs: { flexDirection: 'row', gap: space.lg },
-  tabsSpread: { justifyContent: 'space-between' },
-  tab: { minHeight: 44, justifyContent: 'center' },
-  tabLabel: { ...type.label, color: colors.inkSoft },
-  tabSelected: { color: colors.ink, fontFamily: fonts.monoMedium },
+  pillLabel: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
+  showButton: { minHeight: touchTarget, justifyContent: 'center', paddingLeft: space.sm },
+  notice: { padding: space.lg, borderRadius: radius.md },
+  chips: { flexDirection: 'row', gap: space.sm },
+  chip: { height: 36, paddingHorizontal: 14, borderRadius: 18, backgroundColor: colors.chip, alignItems: 'center', justifyContent: 'center' },
+  chipSelected: { backgroundColor: colors.ink },
+  chipLabel: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
+  chipLabelSelected: { color: colors.ground },
+  underlineTabs: { flexDirection: 'row', justifyContent: 'center', gap: space.xxl },
+  underlineTab: { minHeight: touchTarget, justifyContent: 'center', borderBottomWidth: 3, borderColor: 'transparent' },
+  underlineTabSelected: { borderColor: colors.ink },
+  underlineTabLabel: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
   state: { gap: space.sm, paddingVertical: space.xxl },
 });

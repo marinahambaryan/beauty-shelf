@@ -5,7 +5,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
 import { AuthFrame } from '@/components/auth-frame';
-import { AppText, Button, Mast, Notice, PageTitle, PasswordField, TextField } from '@/components/ui';
+import { AppText, Button, Notice, PageTitle, PasswordField, TextField } from '@/components/ui';
 import { signInSchema, type SignInInput } from '@/domain/validation';
 import { toAppError } from '@/lib/errors';
 import { requireSupabase } from '@/lib/supabase';
@@ -27,7 +27,6 @@ export default function SignInScreen() {
 
   return (
     <AuthFrame>
-      <Mast left="Beauty shelf" right="Private" />
       <View style={styles.masthead}>
         <PageTitle>{'Beauty\nshelf'}</PageTitle>
         <AppText variant="bodySoft" style={styles.tagline}>

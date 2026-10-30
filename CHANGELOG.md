@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 — Design: Shelf + Pinboard (30 Oct 2026)
+
+### Changed
+- New look: a Pinterest-simple black & white app around the glass shelves. Geist for everything, Caveat for handwriting on the glass; outlined search fields, pill buttons and chips, grey photo tiles.
+- Floating tab bar with three icons: **Home**, **Search**, **Profile** (the separate Library and Collections tabs are gone).
+- **Home**: "My shelf" on glass ledges with the notes written above products, a pencil button to edit the shelf, and the owned · wishlist · finished counts (each opens your products).
+- **Search**: catalogue search with recent searches (kept on this device), category chips, "Can't find it? Add it manually", and a two-column photo board where each tile adds the product or shows its status if it's already yours.
+- **Profile**: Products (3-column photo grid with All / Owned / Wishlist / Finished) and Collections (boards). Name and account moved to **Settings**.
+- **Product page**: big photo card, "Add to shelf" toggle, status pill, usage and "buy again" chips, star rating.
+
+### Added
+- **Edit shelf**: choose what stands on the shelf (up to 12), move products earlier or later, write a short note on the glass above each, then Save (D17).
+- Collection page (shelf shown as ledges, other collections as a grid).
+- Migration `collection_items.note` and RPC `save_shelf_layout`; `react-native-svg`, `@expo-google-fonts/geist`, `@expo-google-fonts/caveat` (IBM Plex Mono and Inter Tight removed).
+- Tests: 1 database test (notes per placement), 3 unit tests (recent searches).
+
 ## 0.3.1 — Catalogue images (29 Oct 2026)
 - Five skincare products with packshots: Dr. Althea 345 Relief Cream, Purito Seoul Mighty Bamboo Panthenol Cream, Round Lab 1025 Dokdo Toner and Cleanser, Anua Azelaic Acid 10 Hyaluron Redness Soothing Serum.
 - Public `catalog-images` bucket; image paths resolved against the configured Supabase URL (D16).

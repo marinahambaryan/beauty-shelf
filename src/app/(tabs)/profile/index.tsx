@@ -1,135 +1,179 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { AppText, Button, Mast, Notice, PageTitle, Row, Screen, Section, TextField } from '@/components/ui';
-import { deleteAccount, updateDisplayName } from '@/data/profile';
-import { keys, useProfile } from '@/data/queries';
-import { displayNameSchema } from '@/domain/validation';
-import { useAuth, useUserId } from '@/lib/auth';
+import { CollectionBoard, entriesOf } from '@/components/collection-board';
+import { ProductTile } from '@/components/ProductRow';
+import {
+  AppText,
+  Button,
+  Chips,
+  EmptyState,
+  ErrorState,
+  IconButton,
+  LoadingState,
+  Screen,
+  SearchField,
+  UnderlineTabs,
+} from '@/components/ui';
+import { useCollections, useLibrary, useProfile } from '@/data/queries';
+import { LIBRARY_VIEWS, libraryViewLabel, matchesQuery, sortLibrary, type LibraryView } from '@/domain/library';
+import { useAuth } from '@/lib/auth';
 import { toAppError } from '@/lib/errors';
-import { requireSupabase } from '@/lib/supabase';
-import { colors, radius, space } from '@/theme/tokens';
+import { colors, fonts, space } from '@/theme/tokens';
 
-const DELETE_TITLE = 'Delete your account?';
-const DELETE_BODY = 'This permanently deletes your account, library, notes, collections and photos. This can’t be undone.';
+type Tab = 'products' | 'collections';
+const TABS = [
+  { value: 'products' as const, label: 'Products' },
+  { value: 'collections' as const, label: 'Collections' },
+];
+const isView = (v: unknown): v is LibraryView => typeof v === 'string' && (LIBRARY_VIEWS as readonly string[]).includes(v);
 
+/** Your profile: everything you've added, as a photo grid, and your collections as boards. */
 export default function ProfileScreen() {
+  const params = useLocalSearchParams<{ tab?: string; view?: string }>();
   const { session } = useAuth();
-  const userId = useUserId();
-  const queryClient = useQueryClient();
   const profile = useProfile();
+  const library = useLibrary();
+  const collections = useCollections();
+  const [tab, setTab] = useState<Tab>(params.tab === 'collections' ? 'collections' : 'products');
+  const [view, setView] = useState<LibraryView>(isView(params.view) ? params.view : 'all');
+  const [query, setQuery] = useState('');
 
-  // null = untouched: show the stored name until the user starts editing.
-  const [draft, setDraft] = useState<string | null>(null);
-  const name = draft ?? profile.data?.displayName ?? '';
-  const [nameError, setNameError] = useState<string | undefined>();
-  const [saved, setSaved] = useState(false);
+  // Home's counts link here with ?view=owned etc.; follow it whenever it changes.
+  const [seen, setSeen] = useState(`${params.tab}:${params.view}`);
+  if (`${params.tab}:${params.view}` !== seen) {
+    setSeen(`${params.tab}:${params.view}`);
+    if (params.tab === 'products' || params.tab === 'collections') setTab(params.tab);
+    if (isView(params.view)) setView(params.view);
+  }
 
-  const saveName = useMutation({
-    mutationFn: (value: string | null) => updateDisplayName(requireSupabase(), userId, value),
-    onSuccess: () => {
-      setSaved(true);
-      setDraft(null);
-      return queryClient.invalidateQueries({ queryKey: keys.profile });
-    },
-  });
+  const name = profile.data?.displayName?.trim() || session?.user.email?.split('@')[0] || 'You';
+  const data = useMemo(() => library.data ?? [], [library.data]);
+  const products = useMemo(
+    () => sortLibrary(data.filter((e) => (view === 'all' || e.ownershipStatus === view) && matchesQuery(e, query)), 'recent'),
+    [data, view, query],
+  );
+  const boards = useMemo(
+    () =>
+      (collections.data ?? []).filter(
+        (c) => !query.trim() || c.name.toLowerCase().includes(query.trim().toLowerCase()),
+      ),
+    [collections.data, query],
+  );
 
-  const signOut = useMutation({
-    mutationFn: async () => {
-      const { error } = await requireSupabase().auth.signOut();
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.clear(),
-  });
-
-  // Web has no native alert with buttons, so it confirms inline instead.
-  const [confirmInline, setConfirmInline] = useState(false);
-  const remove = useMutation({
-    mutationFn: async () => {
-      await deleteAccount(requireSupabase());
-      await requireSupabase().auth.signOut({ scope: 'local' });
-    },
-    onSuccess: () => queryClient.clear(),
-  });
-
-  const askDelete = () => {
-    if (process.env.EXPO_OS === 'web') return setConfirmInline(true);
-    Alert.alert(DELETE_TITLE, DELETE_BODY, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => remove.mutate() },
-    ]);
-  };
-
-  const onSaveName = () => {
-    setSaved(false);
-    const parsed = displayNameSchema.safeParse(name);
-    if (!parsed.success) return setNameError(parsed.error.issues[0]?.message);
-    setNameError(undefined);
-    saveName.mutate(parsed.data);
-  };
-
-  const dirty = draft !== null && draft !== (profile.data?.displayName ?? '');
+  const rows: (typeof products)[] = [];
+  for (let i = 0; i < products.length; i += 3) rows.push(products.slice(i, i + 3));
+  const boardRows: (typeof boards)[] = [];
+  for (let i = 0; i < boards.length; i += 2) boardRows.push(boards.slice(i, i + 2));
 
   return (
-    <Screen>
-      <Mast left="Profile" right="Private" />
-      <PageTitle>{profile.data?.displayName?.trim() || 'Profile'}</PageTitle>
+    <Screen contentStyle={styles.content}>
+      <View style={styles.header}>
+        <View style={styles.avatar} accessible={false}>
+          <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+        </View>
+        <View style={styles.flex}>
+          <AppText variant="title" style={styles.name} numberOfLines={1}>
+            {name}
+          </AppText>
+          <AppText variant="bodySoft">{`${data.length} ${data.length === 1 ? 'product' : 'products'} · private`}</AppText>
+        </View>
+        <IconButton icon="settings" tone="plain" onPress={() => router.push('/settings')} accessibilityLabel="Settings" />
+      </View>
 
-      <Section label="Your name" footer="Used to greet you on Home. Only you can see it.">
-        <TextField
-          label="Display name"
-          placeholder="What should we call you?"
-          value={name}
-          onChangeText={(v) => {
-            setDraft(v);
-            setSaved(false);
-          }}
-          error={nameError}
-          maxLength={60}
-          editable={!profile.isPending}
-          returnKeyType="done"
-          onSubmitEditing={onSaveName}
-        />
-        {saveName.isError ? <Notice>{toAppError(saveName.error).message}</Notice> : null}
-        {saved ? <Notice tone="info">Name saved</Notice> : null}
-        {dirty ? <Button label="Save name" onPress={onSaveName} loading={saveName.isPending} /> : null}
-      </Section>
+      <UnderlineTabs options={TABS} value={tab} onChange={setTab} />
 
-      <Section label="Account" footer="Your library, notes and collections are private. Nothing is shared or published.">
-        <View>
-          <Row
-            title={session?.user.email ?? 'Signed in'}
-            asTyped
-            accessibilityLabel={`Signed in as ${session?.user.email ?? 'unknown email'}`}
-          />
-          <Row title={signOut.isPending ? 'Signing out…' : 'Sign out'} onPress={() => signOut.mutate()} />
-          <Row
-            title={remove.isPending ? 'Deleting account…' : 'Delete account'}
-            tone="danger"
-            onPress={remove.isPending ? undefined : askDelete}
+      <View style={styles.searchRow}>
+        <View style={styles.flex}>
+          <SearchField
+            label={tab === 'products' ? 'Search your products' : 'Search your collections'}
+            placeholder={tab === 'products' ? 'Search your products' : 'Search your collections'}
+            value={query}
+            onChangeText={setQuery}
           />
         </View>
-        {signOut.isError ? <Notice>{toAppError(signOut.error).message}</Notice> : null}
-        {remove.isError ? <Notice>{toAppError(remove.error).message}</Notice> : null}
-        {confirmInline ? (
-          <View style={styles.confirm} accessibilityRole="alert">
-            <AppText variant="label">{DELETE_TITLE}</AppText>
-            <AppText variant="body">{DELETE_BODY}</AppText>
-            <Button label="Delete" variant="danger" onPress={() => remove.mutate()} loading={remove.isPending} />
-            <Button label="Cancel" variant="plain" onPress={() => setConfirmInline(false)} disabled={remove.isPending} />
-          </View>
+        {tab === 'products' ? (
+          <IconButton icon="plus" tone="plain" iconSize={28} onPress={() => router.push('/add')} accessibilityLabel="Add product" />
         ) : null}
-      </Section>
+      </View>
+
+      {tab === 'products' ? (
+        <>
+          <Chips
+            scroll
+            options={LIBRARY_VIEWS.map((v) => ({ value: v, label: libraryViewLabel[v] }))}
+            value={view}
+            onChange={setView}
+            accessibilityLabel="Show"
+          />
+          {library.isPending ? (
+            <LoadingState label="Loading your products" />
+          ) : library.isError ? (
+            <ErrorState message={toAppError(library.error).message} onRetry={() => library.refetch()} />
+          ) : data.length === 0 ? (
+            <EmptyState
+              title="Nothing here yet"
+              body="Everything you own, want and finish lives here."
+              action={<Button label="Add product" onPress={() => router.push('/add')} />}
+            />
+          ) : products.length === 0 ? (
+            <EmptyState
+              title={query.trim() ? `No matches for “${query.trim()}”` : 'Nothing here'}
+              body={query.trim() ? 'Try another name, brand or shade.' : 'Try another filter.'}
+            />
+          ) : (
+            <View style={styles.grid}>
+              {rows.map((row, r) => (
+                <View key={r} style={styles.gridRow}>
+                  {row.map((e) => (
+                    <ProductTile key={e.id} entry={e} />
+                  ))}
+                  {Array.from({ length: 3 - row.length }, (_, i) => (
+                    <View key={`pad-${i}`} style={styles.flex} />
+                  ))}
+                </View>
+              ))}
+            </View>
+          )}
+        </>
+      ) : collections.isPending ? (
+        <LoadingState label="Loading collections" />
+      ) : collections.isError ? (
+        <ErrorState message={toAppError(collections.error).message} onRetry={() => collections.refetch()} />
+      ) : boards.length === 0 ? (
+        <EmptyState title="No collections yet" body="Your shelf and lists show up here. Making your own collections comes next." />
+      ) : (
+        <View style={styles.boards}>
+          {boardRows.map((row, r) => (
+            <View key={r} style={styles.boardRow}>
+              {row.map((c) => (
+                <CollectionBoard
+                  key={c.id}
+                  collection={c}
+                  entries={entriesOf(c, data)}
+                  onPress={() => router.push({ pathname: '/collection/[id]', params: { id: c.id } })}
+                />
+              ))}
+              {row.length === 1 ? <View style={styles.flex} /> : null}
+            </View>
+          ))}
+        </View>
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  confirm: {
-    gap: space.md,
-    padding: space.lg,
-    borderRadius: radius.md,
-    backgroundColor: colors.dangerWash,
-  },
+  flex: { flex: 1 },
+  content: { paddingHorizontal: space.lg, gap: space.lg },
+  header: { flexDirection: 'row', alignItems: 'center', gap: space.md + 2 },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#F2C3A2', alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontFamily: fonts.medium, fontSize: 26, color: colors.ink },
+  name: { fontSize: 22, lineHeight: 28, letterSpacing: -0.3 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  grid: { gap: 6 },
+  gridRow: { flexDirection: 'row', gap: 6 },
+  boards: { gap: space.lg },
+  boardRow: { flexDirection: 'row', gap: 10 },
 });

@@ -40,6 +40,7 @@ export type Database = {
           desired_quantity: number | null;
           id: string;
           library_item_id: string | null;
+          note: string | null;
           personal_product_id: string | null;
           sort_order: number;
           user_id: string;
@@ -53,6 +54,7 @@ export type Database = {
           desired_quantity?: number | null;
           id?: string;
           library_item_id?: string | null;
+          note?: string | null;
           personal_product_id?: string | null;
           sort_order?: number;
           user_id?: string;
@@ -65,6 +67,7 @@ export type Database = {
           desired_quantity?: number | null;
           id?: string;
           library_item_id?: string | null;
+          note?: string | null;
           personal_product_id?: string | null;
           sort_order?: number;
           user_id?: string;
@@ -474,6 +477,15 @@ export type Database = {
           p_collection_id: string;
           p_expected_version: number;
           p_library_item_ids: string[];
+        };
+        Returns: number;
+      };
+      save_shelf_layout: {
+        Args: {
+          p_collection_id: string;
+          p_expected_version: number;
+          p_library_item_ids: string[];
+          p_notes: string[];
         };
         Returns: number;
       };

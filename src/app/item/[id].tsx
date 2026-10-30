@@ -1,18 +1,19 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Icon } from '@/components/icons';
 import { PhotoField } from '@/components/photo-field';
 import { RatingInput } from '@/components/rating';
 import { Bottle } from '@/components/shelf';
 import {
   AppText,
-  BracketTabs,
   Button,
+  Chips,
   EmptyState,
   ErrorState,
+  IconButton,
   LoadingState,
-  Mast,
   Notice,
   Row,
   Screen,
@@ -22,8 +23,9 @@ import {
   TopBar,
 } from '@/components/ui';
 import { ownPhotoPath, type LibraryEntry } from '@/data/library';
-import { useDeleteItem, useSetPhoto, useUpdateItem } from '@/data/mutations';
-import { useLibraryItem } from '@/data/queries';
+import { SHELF_CAPACITY } from '@/data/collections';
+import { useDeleteItem, useSaveShelf, useSetPhoto, useUpdateItem } from '@/data/mutations';
+import { useLibraryItem, useShelf } from '@/data/queries';
 import {
   categoryLabel,
   itemPatch,
@@ -39,7 +41,7 @@ import {
 import { finishedDateSchema, noteSchema } from '@/domain/validation';
 import { toAppError } from '@/lib/errors';
 import { goBack } from '@/lib/navigation';
-import { colors, radius, space } from '@/theme/tokens';
+import { colors, fonts, radius, space } from '@/theme/tokens';
 
 /** The editor keeps text fields as typed; they are validated on save. */
 type Form = Omit<ItemDraft, 'finishedAt' | 'notes'> & { finishedAt: string; notes: string };
@@ -161,43 +163,58 @@ function Editor({
   const conflict = update.isError && toAppError(update.error).kind === 'conflict';
 
   return (
-    <Screen bottomInset>
-      <TopBar onBack={() => goBack()} />
-      <Mast left={entry.brand || 'Added manually'} right={entry.source === 'personal' ? 'Added manually' : categoryLabel[entry.category]} />
-      <View style={styles.title}>
-        <AppText variant="title">{entry.name}</AppText>
-        {entry.variant ? <AppText variant="label" style={styles.soft}>{entry.variant}</AppText> : null}
-      </View>
-
-      {notice && !dirty ? <Notice tone="info">{notice}</Notice> : null}
-
+    <Screen bottomInset contentStyle={styles.content}>
       <PhotoField
+        height={400}
         uri={entry.imageUrl}
         removable={Boolean(ownPhotoPath(entry))}
         onChange={(uri) => photo.mutate({ entry, uri })}
         busy={photo.isPending}
         busyLabel={photo.variables?.uri ? 'Uploading photo' : 'Removing photo'}
         error={photo.isError ? toAppError(photo.error).message : null}
-        placeholder={<Bottle uri={null} category={entry.category} name={entry.name} sub={entry.variant} scale={1.6} />}
+        placeholder={<Bottle uri={null} category={entry.category} name={entry.name} sub={entry.variant} scale={2.2} />}
+        overlay={
+          <View style={styles.heroBack}>
+            <IconButton icon="back" tone="white" size={40} iconSize={20} onPress={() => goBack()} accessibilityLabel="Back" />
+          </View>
+        }
       />
 
-      <Section label="Status">
-        <BracketTabs
-          options={OWNERSHIP_STATUSES.map((s) => ({ value: s, label: ownershipLabel[s] }))}
-          value={form.ownershipStatus}
-          onChange={(s) => set('ownershipStatus', s)}
-          accessibilityLabel="Status"
-        />
-        {leavingOwned ? (
-          <AppText variant="bodySoft">
-            {`Moving to ${ownershipLabel[form.ownershipStatus]} clears its usage details. Notes and rating stay.`}
-          </AppText>
-        ) : null}
-      </Section>
+      <View style={styles.actions}>
+        <ShelfToggle entryId={entry.id} name={entry.name} />
+        <Pressable
+          onPress={() => {
+            const i = OWNERSHIP_STATUSES.indexOf(form.ownershipStatus);
+            set('ownershipStatus', OWNERSHIP_STATUSES[(i + 1) % OWNERSHIP_STATUSES.length] ?? 'owned');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`Status: ${ownershipLabel[form.ownershipStatus]}. Change status`}
+          style={({ pressed }) => [styles.status, pressed && styles.pressed]}
+        >
+          <Text style={styles.statusLabel}>{ownershipLabel[form.ownershipStatus]}</Text>
+          <Icon name="chevronDown" size={16} color={colors.ground} strokeWidth={2.4} />
+        </Pressable>
+      </View>
+
+      <View style={styles.title}>
+        <AppText variant="heading">{entry.name}</AppText>
+        <AppText variant="bodySoft">
+          {[entry.brand || null, entry.variant, entry.source === 'personal' ? 'Added manually' : categoryLabel[entry.category]]
+            .filter(Boolean)
+            .join(' · ')}
+        </AppText>
+      </View>
+
+      {notice && !dirty ? <Notice tone="info">{notice}</Notice> : null}
+      {leavingOwned ? (
+        <AppText variant="bodySoft">
+          {`Moving to ${ownershipLabel[form.ownershipStatus]} clears its usage details. Notes and rating stay.`}
+        </AppText>
+      ) : null}
 
       {form.ownershipStatus === 'owned' ? (
         <Section label="Usage">
-          <BracketTabs
+          <Chips
             options={USAGE_STATUSES.map((u) => ({ value: u, label: usageLabel[u] }))}
             value={form.usageStatus}
             onChange={(u) => set('usageStatus', u)}
@@ -231,12 +248,11 @@ function Editor({
       </Section>
 
       <Section label="Would you buy it again?">
-        <BracketTabs
+        <Chips
           options={REPURCHASE_INTENTS.map((r) => ({ value: r, label: repurchaseLabel[r] }))}
           value={form.repurchaseIntent}
           onChange={(r) => set('repurchaseIntent', r)}
           onClear={() => set('repurchaseIntent', null)}
-          spread={false}
           accessibilityLabel="Would you buy it again?"
         />
       </Section>
@@ -292,9 +308,52 @@ function Editor({
   );
 }
 
+/** Puts the product on the shelf, or takes it off. Saves straight away, like a pin. */
+function ShelfToggle({ entryId, name }: { entryId: string; name: string }) {
+  const { shelf, isPending } = useShelf();
+  const save = useSaveShelf();
+  const placements = (shelf?.items ?? []).flatMap((i) => (i.libraryItemId ? [{ libraryItemId: i.libraryItemId, note: i.note }] : []));
+  const onShelf = placements.some((p) => p.libraryItemId === entryId);
+  const full = !onShelf && placements.length >= SHELF_CAPACITY;
+  const toggle = () =>
+    save.mutate({
+      shelf: shelf ? { id: shelf.id, version: shelf.version } : null,
+      placements: onShelf ? placements.filter((p) => p.libraryItemId !== entryId) : [...placements, { libraryItemId: entryId, note: null }],
+    });
+  return (
+    <View style={styles.shelfToggle}>
+      <IconButton
+        icon={onShelf ? 'check' : 'shelf'}
+        tone={onShelf ? 'ink' : 'tile'}
+        onPress={toggle}
+        disabled={isPending || save.isPending || full}
+        selected={onShelf}
+        accessibilityLabel={onShelf ? `Take ${name} off your shelf` : `Put ${name} on your shelf`}
+      />
+      <AppText variant="bodySoft">{full ? 'Shelf is full' : onShelf ? 'On your shelf' : 'Add to shelf'}</AppText>
+      {save.isError ? <AppText variant="small" style={styles.danger}>{toAppError(save.error).message}</AppText> : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  content: { gap: space.lg },
   title: { gap: space.xs },
-  soft: { color: colors.inkSoft },
+  pressed: { opacity: 0.55 },
+  danger: { color: colors.danger },
+  heroBack: { position: 'absolute', top: 12, left: 12 },
+  actions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
+  shelfToggle: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexShrink: 1, flexWrap: 'wrap' },
+  status: {
+    height: 44,
+    paddingHorizontal: 18,
+    borderRadius: 22,
+    backgroundColor: colors.ink,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusLabel: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ground },
   saveBar: { gap: space.xs },
   confirm: { gap: space.md, padding: space.lg, borderRadius: radius.md, backgroundColor: colors.dangerWash },
 });

@@ -12,6 +12,7 @@ import {
   updateLibraryItem,
   type LibraryEntry,
 } from './library';
+import { saveShelfLayout, type ShelfPlacement } from './collections';
 import { removePhotos } from './photos';
 import { keys } from './queries';
 
@@ -80,4 +81,12 @@ export function useDeleteItem() {
   });
 }
 
-
+export function useSaveShelf() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { shelf: { id: string; version: number } | null; placements: ShelfPlacement[] }) =>
+      saveShelfLayout(requireSupabase(), input.shelf, input.placements),
+    // Also on error: a version conflict means the stored shelf moved on, so fetch it.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: keys.collections }),
+  });
+}

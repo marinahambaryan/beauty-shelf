@@ -2,15 +2,15 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Bottle, GlassShelf } from '@/components/shelf';
+import { Bottle } from '@/components/shelf';
 import {
   AppText,
-  BracketTabs,
   Button,
+  Chips,
   EmptyState,
   ErrorState,
+  IconButton,
   LoadingState,
-  Mast,
   Notice,
   Screen,
   Section,
@@ -30,7 +30,7 @@ import {
 import { noteSchema } from '@/domain/validation';
 import { toAppError } from '@/lib/errors';
 import { goBack } from '@/lib/navigation';
-import { colors, space, twoDigit } from '@/theme/tokens';
+import { colors, radius, space } from '@/theme/tokens';
 
 const variantName = (v: CatalogVariant) => v.label ?? v.shadeName ?? v.sizeLabel ?? 'Standard';
 
@@ -75,7 +75,7 @@ export default function AddProductScreen() {
   if (product.isPending) {
     return (
       <Screen bottomInset>
-        <TopBar onBack={() => goBack('/add')} />
+        <TopBar onBack={() => goBack('/search')} />
         <LoadingState label="Loading product" />
       </Screen>
     );
@@ -83,7 +83,7 @@ export default function AddProductScreen() {
   if (product.isError || !product.data) {
     return (
       <Screen bottomInset>
-        <TopBar onBack={() => goBack('/add')} />
+        <TopBar onBack={() => goBack('/search')} />
         {product.isError ? (
           <ErrorState message={toAppError(product.error).message} onRetry={() => product.refetch()} />
         ) : (
@@ -99,25 +99,28 @@ export default function AddProductScreen() {
 
   return (
     <Screen bottomInset>
-      <TopBar onBack={() => goBack('/add')} />
-      <Mast left={p.brand} right={categoryLabel[p.category]} />
-      <AppText variant="title">{p.name}</AppText>
-
-      <View accessible={false} importantForAccessibility="no-hide-descendants">
-        <GlassShelf height={150}>
+      <View style={styles.hero}>
+        <View accessible={false} importantForAccessibility="no-hide-descendants">
           <Bottle
             uri={shown?.imageUrl ?? p.imageUrl}
             category={p.category}
             name={p.name}
             sub={shown && !single ? variantName(shown) : categoryLabel[p.category]}
-            scale={1.7}
-            photoHeight={140}
+            scale={2.4}
+            photoHeight={300}
           />
-        </GlassShelf>
+        </View>
+        <View style={styles.heroBack}>
+          <IconButton icon="back" tone="white" size={40} iconSize={20} onPress={() => goBack('/search')} accessibilityLabel="Back" />
+        </View>
+      </View>
+      <View style={styles.title}>
+        <AppText variant="heading">{p.name}</AppText>
+        <AppText variant="bodySoft">{[p.brand, categoryLabel[p.category]].filter(Boolean).join(' · ')}</AppText>
       </View>
 
       {!single ? (
-        <Section label={kind} right={`${twoDigit(variants.length)} ${kind === 'Shade' ? 'shades' : 'sizes'}`}>
+        <Section label={kind} right={`${variants.length} ${kind === 'Shade' ? 'shades' : 'sizes'}`}>
           <View accessibilityRole="radiogroup" accessibilityLabel={kind}>
             {variants.map((v) => {
               const selected = v.id === picked;
@@ -136,9 +139,7 @@ export default function AddProductScreen() {
                     .join(', ')}
                   style={({ pressed }) => [styles.choice, pressed && styles.pressed]}
                 >
-                  <AppText variant="label" style={styles.mark}>
-                    {selected ? '[×]' : '[ ]'}
-                  </AppText>
+                  <View style={[styles.radio, selected && styles.radioOn]}>{selected ? <View style={styles.radioDot} /> : null}</View>
                   <AppText variant="label" style={styles.flex} numberOfLines={2}>
                     {variantName(v)}
                   </AppText>
@@ -163,7 +164,7 @@ export default function AddProductScreen() {
       ) : (
         <>
           <Section label="Add to">
-            <BracketTabs
+            <Chips
               options={OWNERSHIP_STATUSES.map((s) => ({ value: s, label: ownershipLabel[s] }))}
               value={status}
               onChange={setStatus}
@@ -197,6 +198,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: colors.rule,
   },
-  mark: { width: 28 },
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: colors.fieldBorder, alignItems: 'center', justifyContent: 'center' },
+  radioOn: { borderColor: colors.ink, borderWidth: 2 },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.ink },
+  hero: {
+    height: 380,
+    borderRadius: radius.xl,
+    backgroundColor: colors.tile,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: -space.md,
+  },
+  heroBack: { position: 'absolute', top: 12, left: 12 },
+  title: { gap: space.xs, marginTop: -space.sm },
   pressed: { opacity: 0.5 },
 });

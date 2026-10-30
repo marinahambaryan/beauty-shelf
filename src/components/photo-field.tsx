@@ -8,7 +8,7 @@ import { colors, radius, space } from '@/theme/tokens';
 import { AppText, Notice, TextAction } from './ui';
 
 /**
- * A product photo with its actions underneath: CHOOSE PHOTO · TAKE PHOTO · REMOVE.
+ * A product photo card with its actions underneath: Choose photo · Take photo · Remove.
  * Shows `placeholder` (the neutral stand-in) when there is no photo yet.
  */
 export function PhotoField({
@@ -19,7 +19,13 @@ export function PhotoField({
   placeholder,
   error,
   removable = true,
+  height = 220,
+  overlay,
 }: {
+  /** Height of the picture card. */
+  height?: number;
+  /** Drawn over the picture's corner, e.g. a back button on the product page. */
+  overlay?: ReactNode;
   uri: string | null;
   /** False when the picture shown isn't the person's own (a catalogue image): no Remove. */
   removable?: boolean;
@@ -49,7 +55,8 @@ export function PhotoField({
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.frame} accessible accessibilityLabel={uri ? 'Your photo' : 'No photo yet'}>
+      <View style={[styles.frame, { height }]}>
+        <View style={StyleSheet.absoluteFill} accessible accessibilityLabel={uri ? 'Photo' : 'No photo yet'} />
         {uri ? (
           <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="contain" transition={150} />
         ) : (
@@ -63,6 +70,7 @@ export function PhotoField({
             </AppText>
           </View>
         ) : null}
+        {overlay}
       </View>
       <View style={styles.actions}>
         <TextAction
@@ -83,9 +91,8 @@ export function PhotoField({
 const styles = StyleSheet.create({
   wrap: { gap: space.xs },
   frame: {
-    height: 184,
-    borderRadius: radius.lg,
-    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    backgroundColor: colors.tile,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -98,5 +105,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.78)',
   },
   busyText: { color: colors.ink },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.xl },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.xl, paddingHorizontal: space.xs },
 });

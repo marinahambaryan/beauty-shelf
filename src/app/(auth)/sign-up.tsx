@@ -6,7 +6,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
 import { AuthFrame } from '@/components/auth-frame';
-import { AppText, Button, Mast, Notice, PageTitle, PasswordField, TextField } from '@/components/ui';
+import { AppText, Button, Notice, PageTitle, PasswordField, TextField } from '@/components/ui';
 import { signUpSchema, type SignUpInput } from '@/domain/validation';
 import { toAppError } from '@/lib/errors';
 import { requireSupabase } from '@/lib/supabase';
@@ -38,7 +38,6 @@ export default function SignUpScreen() {
   if (awaitingConfirmation) {
     return (
       <AuthFrame>
-        <Mast left="Beauty shelf" right="New account" />
         <View style={styles.masthead}>
           <PageTitle>{'Check your\nemail'}</PageTitle>
           <AppText variant="body">
@@ -52,7 +51,6 @@ export default function SignUpScreen() {
 
   return (
     <AuthFrame>
-      <Mast left="Beauty shelf" right="New account" />
       <View style={styles.masthead}>
         <PageTitle>{'New\naccount'}</PageTitle>
         <AppText variant="bodySoft">Your library is private to you.</AppText>

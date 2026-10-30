@@ -27,7 +27,7 @@ _Last updated 27 Oct 2026._
 - No add/edit flows yet — screens say so plainly rather than showing dead buttons.
 - Offline: React Query caches reads in memory only; no persisted cache or connectivity banner yet (Milestone 5).
 
-## Milestone 2 — Search + manual add + personal library (next)
+## Milestone 2 — Search + manual add + personal library (done)
 1. Add Product flow: debounced catalog search (`search_catalog`), loading / error / empty states, "Can't find it? Add manually" always visible.
 2. Product detail + variant picker; skip the picker for default-variant products.
 3. Add-to-library sheet: Owned / Wishlist / Finished, optional note; duplicate → open existing entry with "change status".
@@ -35,11 +35,14 @@ _Last updated 27 Oct 2026._
 5. Library item detail/editor: status, usage, rating, notes, repurchase intent, finished date; version-checked saves; delete with confirmation.
 6. Tests: mutation hooks, form schemas, an integration test for the add flow.
 
-## Milestone 3 — Collections + Shopping List
+## Design pass — Shelf + Pinboard (done, 30 Oct 2026)
+Black & white Pinterest-style UI, floating three-tab bar, Home shelf with handwritten notes, Edit shelf (pick, Move earlier/later, notes, Save via `save_shelf_layout`), Search board, Profile with Products/Collections, Settings. See D17–D18.
+
+## Milestone 3 — Collections + Shopping List (next)
 Create/rename/delete custom collections, multi-select library picker, reorder (`set_collection_order`), Shopping List with quantity, check-off and "Mark purchased" confirmation (`mark_shopping_item_purchased`).
 
 ## Milestone 4 — Curated shelf editor
-12 fixed slots, distinct view/edit modes, long-press drag with placeholder + haptics, Move earlier/later accessibility actions, Save/Cancel (only Save calls `save_shelf`), full-shelf replace flow, list/grid fallback.
+Builds on Edit shelf: multiple shelves, long-press drag with placeholder + haptics, Move earlier/later accessibility actions, Save/Cancel (only Save calls `save_shelf`), full-shelf replace flow, list/grid fallback.
 
 ## Milestone 5 — Polish + hardening
 Editorial typeface + icon set, image handling, offline cache persistence and connectivity state, accessibility pass (dynamic type, screen reader, reduced motion), performance on 500+ item libraries, Maestro or Detox smoke test, CI workflow running `npm run check` and `npm run test:db`.

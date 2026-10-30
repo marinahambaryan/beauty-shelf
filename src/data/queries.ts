@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ProductCategory } from '@/domain/library';
 import { requireSupabase } from '@/lib/supabase';
 import { supabaseCatalog } from './catalog';
-import { listCollections, listShelfItemIds } from './collections';
+import { listCollections } from './collections';
 import { libraryCounts, listLibrary } from './library';
 import { getProfile } from './profile';
 
@@ -12,7 +12,6 @@ export const keys = {
   library: ['library'] as const,
   libraryCounts: ['library', 'counts'] as const,
   collections: ['collections'] as const,
-  shelf: ['collections', 'shelf'] as const,
   profile: ['profile'] as const,
   catalogSearch: (query: string, category: ProductCategory | null) => ['catalog', 'search', query, category] as const,
   catalogProduct: (id: string) => ['catalog', 'product', id] as const,
@@ -24,7 +23,11 @@ export const useLibraryCounts = () =>
 export const useCollections = () =>
   useQuery({ queryKey: keys.collections, queryFn: () => listCollections(requireSupabase()) });
 export const useProfile = () => useQuery({ queryKey: keys.profile, queryFn: () => getProfile(requireSupabase()) });
-export const useShelf = () => useQuery({ queryKey: keys.shelf, queryFn: () => listShelfItemIds(requireSupabase()) });
+/** The curated shelf (at most one per person for now), read from the collections list. */
+export function useShelf() {
+  const collections = useCollections();
+  return { ...collections, shelf: collections.data?.find((c) => c.type === 'shelf') ?? null };
+}
 
 /** One library entry, read from the library list so every screen agrees on it. */
 export function useLibraryItem(id: string | undefined) {

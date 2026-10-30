@@ -1,11 +1,12 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { colors, space } from '@/theme/tokens';
+import { Icon } from './icons';
 import { AppText } from './ui';
 
 /**
- * Five label squares, filled up to the rating: ■ ■ ■ □ □  3 / 5.
- * Tapping the current rating again clears it. One adjustable control for screen readers.
+ * Five stars, filled up to the rating. Tapping the current rating again clears it.
+ * One adjustable control for screen readers.
  */
 export function RatingInput({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
   const set = (n: number) => onChange(n === value ? null : n);
@@ -24,24 +25,20 @@ export function RatingInput({ value, onChange }: { value: number | null; onChang
       }}
     >
       {[1, 2, 3, 4, 5].map((n) => (
-        <Pressable
-          key={n}
-          onPress={() => set(n)}
-          hitSlop={4}
-          style={({ pressed }) => [styles.box, value !== null && n <= value && styles.filled, pressed && styles.pressed]}
-        />
+        <Pressable key={n} onPress={() => set(n)} hitSlop={4} style={({ pressed }) => [styles.star, pressed && styles.pressed]}>
+          <Icon name="star" size={28} filled={value !== null && n <= value} />
+        </Pressable>
       ))}
-      <AppText variant="label" style={styles.value}>
-        {value ? `${value} / 5` : 'Not rated'}
+      <AppText variant="bodySoft" style={styles.value}>
+        {value ? `${value} of 5` : 'Not rated'}
       </AppText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 44 },
-  box: { width: 30, height: 30, borderRadius: 3, borderWidth: 1.5, borderColor: colors.ink },
-  filled: { backgroundColor: colors.ink },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 44 },
+  star: { width: 38, height: 44, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.5 },
   value: { marginLeft: space.sm, color: colors.inkSoft },
 });

@@ -370,6 +370,37 @@ describe('curated shelf', () => {
     assert.equal(count[0].n, 11);
   });
 
+  test('save_shelf_layout stores a note per placement, trims blanks, and limits length', async () => {
+    const u = await createUser('notes');
+    const variants = await as(u, (q) => q('select id from product_variants order by id limit 3'));
+    const ids = await as(u, async (q) => {
+      const out = [];
+      for (const v of variants) out.push((await addVariant(q, v.id)).library_item_id);
+      return out;
+    });
+    const shelf = await as(u, (q) =>
+      q("insert into collections (type, name) values ('shelf', 'My shelf') returning id, version").then((r) => r[0]));
+    const v2 = await as(u, (q) =>
+      q('select save_shelf_layout($1, $2, $3, $4) as v', [shelf.id, ids, ['every day', '  ', ' holy grail '], shelf.version])
+        .then((r) => r[0].v));
+    const rows = await as(u, (q) =>
+      q('select library_item_id, note from collection_items where collection_id = $1 order by sort_order', [shelf.id]));
+    assert.deepEqual(rows.map((r) => r.note), ['every day', null, 'holy grail']);
+
+    await expectDenied(u, (q) => q('select save_shelf_layout($1, $2, $3, $4)', [shelf.id, ids, ['a'], v2]), /one note per product/);
+    await expectDenied(u, (q) => q('select save_shelf_layout($1, $2, $3, $4)', [shelf.id, ids, ['x'.repeat(41), null, null], v2]),
+      /collection_items_note_length/);
+
+    // Moving and dropping products keeps notes with their own placement.
+    await as(u, (q) => q('select save_shelf_layout($1, $2, $3, $4)', [shelf.id, [ids[2], ids[0]], ['holy grail', 'every day'], v2]));
+    const after = await as(u, (q) =>
+      q('select library_item_id, note from collection_items where collection_id = $1 order by sort_order', [shelf.id]));
+    assert.deepEqual(after.map((r) => [r.library_item_id, r.note]), [[ids[2], 'holy grail'], [ids[0], 'every day']]);
+
+    const bob = await createUser('notes-bob');
+    await expectDenied(bob, (q) => q('select save_shelf_layout($1, $2, $3, $4)', [shelf.id, [], [], v2 + 1]), /not found/);
+  });
+
   test('one shelf per user in the MVP', async () => {
     const u = await createUser('twoshelves');
     await expectDenied(u, async (q) => {

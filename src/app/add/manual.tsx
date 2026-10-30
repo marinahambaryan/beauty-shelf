@@ -2,17 +2,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PhotoField } from '@/components/photo-field';
 import { Bottle } from '@/components/shelf';
-import { AppText, BracketTabs, Button, Mast, Notice, PageTitle, Screen, Section, TextField, TopBar } from '@/components/ui';
+import { AppText, Button, Chips, Notice, Screen, Section, TextField, TopBar } from '@/components/ui';
 import { useAddManually } from '@/data/mutations';
 import { CATEGORIES, categoryLabel, OWNERSHIP_STATUSES, ownershipLabel } from '@/domain/library';
 import { personalProductSchema, type PersonalProductForm, type PersonalProductInput } from '@/domain/validation';
 import { toAppError } from '@/lib/errors';
 import { goBack } from '@/lib/navigation';
-import { colors, fonts, space, type } from '@/theme/tokens';
 
 /** Add manually: a product that isn't in the catalogue. It stays private to this person. */
 export default function AddManuallyScreen() {
@@ -42,9 +40,7 @@ export default function AddManuallyScreen() {
 
   return (
     <Screen bottomInset>
-      <TopBar onBack={() => goBack('/add')} />
-      <Mast left="Add product" right="Added manually" />
-      <PageTitle>{'Add it\nyourself'}</PageTitle>
+      <TopBar onBack={() => goBack('/search')} title="Add it manually" />
       <AppText variant="bodySoft">For anything that isn’t in the catalogue. Only you can see it.</AppText>
 
       <PhotoField
@@ -106,25 +102,12 @@ export default function AddManuallyScreen() {
         name="category"
         render={({ field }) => (
           <Section label="Category">
-            <View style={styles.wrap} accessibilityRole="radiogroup" accessibilityLabel="Category">
-              {CATEGORIES.map((c) => {
-                const selected = field.value === c;
-                return (
-                  <Pressable
-                    key={c}
-                    onPress={() => field.onChange(c)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: selected }}
-                    accessibilityLabel={categoryLabel[c]}
-                    style={styles.option}
-                  >
-                    <Text style={[type.label, styles.optionText, selected && styles.selected]}>
-                      {selected ? `[${categoryLabel[c]}]` : categoryLabel[c]}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <Chips
+              options={CATEGORIES.map((c) => ({ value: c, label: categoryLabel[c] }))}
+              value={field.value}
+              onChange={field.onChange}
+              accessibilityLabel="Category"
+            />
           </Section>
         )}
       />
@@ -134,7 +117,7 @@ export default function AddManuallyScreen() {
         name="status"
         render={({ field }) => (
           <Section label="Add to">
-            <BracketTabs
+            <Chips
               options={OWNERSHIP_STATUSES.map((s) => ({ value: s, label: ownershipLabel[s] }))}
               value={field.value}
               onChange={field.onChange}
@@ -166,10 +149,3 @@ export default function AddManuallyScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.lg },
-  option: { minHeight: 40, justifyContent: 'center' },
-  optionText: { color: colors.inkSoft },
-  selected: { color: colors.ink, fontFamily: fonts.monoMedium },
-});

@@ -63,3 +63,11 @@ The item editor keeps a draft and shows **Save changes** only when something cha
 Catalogue packshots are files in a public, read-only `catalog-images` bucket (migration `20261029000000_catalog_images.sql`; local files in `supabase/catalog-images`, uploaded by `supabase seed buckets`). `products.image_url` stores the path (`catalog-images/x.webp`), not a host, and the app builds the full URL from its configured Supabase URL (`src/data/images.ts`), so the same seed works on the Mac, on a phone over the LAN, and on a hosted project. Full `https://` URLs from a future licensed source pass through untouched.
 Images are prepared once: cropped to the product and their white studio background turned into transparency ("colour to alpha"), so they sit on the stone cards and glass shelves like objects rather than white tiles, then saved as WebP at most 900 px tall (12–70 KB each).
 **Rights:** the five packshots added on 29 Oct 2026 (Dr. Althea, Purito Seoul, Round Lab ×2, Anua) were supplied by the owner for development. They are the brands' own photos; before a public release, get the brands' permission or replace them with a licensed source.
+
+## D17 · Notes on the glass belong to the placement
+The handwriting above a product on the shelf ("every day", "holy grail") is stored on the shelf placement, `collection_items.note` (≤ 40 characters), not on the product: it describes where the product stands, and taking a product off the shelf takes its note with it. Stamps on products (HOLY GRAIL, AGAIN ×2) are a separate, later feature that would live on the library entry. The editor saves products, order and notes in one version-checked call, `save_shelf_layout`, which wraps `save_shelf`; the first save creates the shelf. Reordering uses Move earlier / later buttons for now; drag and drop comes with the Milestone 4 shelf editor.
+*Reversal:* drop the column and the function; `save_shelf` is unchanged.
+
+## D18 · Three tabs, floating
+Following the Shelf + Pinboard design, the app has three tabs — Home, Search, Profile — in a floating pill. Adding happens from Search (or the + next to your products); the library lives under Profile → Products, collections under Profile → Collections, and account settings on their own page. Someone else's profile is designed but not built: every library is still private.
+
