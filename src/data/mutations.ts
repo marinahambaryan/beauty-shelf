@@ -12,7 +12,21 @@ import {
   updateLibraryItem,
   type LibraryEntry,
 } from './library';
-import { saveShelfLayout, type ShelfPlacement } from './collections';
+import {
+  addToCollection,
+  createCollection,
+  deleteCollection,
+  markPurchased,
+  removeFromCollection,
+  saveShelfLayout,
+  setCollectionOrder,
+  updateCollection,
+  updateShoppingItem,
+  type CollectionLook,
+  type CollectionSummary,
+  type NewItem,
+  type ShelfPlacement,
+} from './collections';
 import { removePhotos } from './photos';
 import { keys } from './queries';
 
@@ -88,5 +102,103 @@ export function useSaveShelf() {
       saveShelfLayout(requireSupabase(), input.shelf, input.placements),
     // Also on error: a version conflict means the stored shelf moved on, so fetch it.
     onSettled: () => queryClient.invalidateQueries({ queryKey: keys.collections }),
+  });
+}
+
+/** Collection changes refresh the collections; adding or deleting can touch the library too. */
+function useRefreshCollections() {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: keys.collections });
+}
+
+export function useCreateCollection() {
+  const refresh = useRefreshCollections();
+  return useMutation({
+    mutationFn: (input: { name: string; look: CollectionLook }) => createCollection(requireSupabase(), input),
+    onSuccess: () => refresh(),
+  });
+}
+
+export function useUpdateCollection() {
+  const refresh = useRefreshCollections();
+  return useMutation({
+    mutationFn: (input: { id: string; version: number; patch: { name?: string; look?: CollectionLook } }) =>
+      updateCollection(requireSupabase(), input),
+    onSettled: () => refresh(),
+  });
+}
+
+export function useDeleteCollection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteCollection(requireSupabase(), id),
+    onSuccess: (_d, id) => {
+      queryClient.setQueryData<CollectionSummary[]>(keys.collections, (old) => old?.filter((c) => c.id !== id));
+      return queryClient.invalidateQueries({ queryKey: keys.collections });
+    },
+  });
+}
+
+export function useAddToCollection() {
+  const refresh = useRefreshCollections();
+  return useMutation({
+    mutationFn: (input: { collectionId: string; items: NewItem[] }) =>
+      addToCollection(requireSupabase(), input.collectionId, input.items),
+    onSettled: () => refresh(),
+  });
+}
+
+export function useRemoveFromCollection() {
+  const refresh = useRefreshCollections();
+  return useMutation({
+    mutationFn: (itemIds: string[]) => removeFromCollection(requireSupabase(), itemIds),
+    onSettled: () => refresh(),
+  });
+}
+
+export function useSetCollectionOrder() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; version: number; itemIds: string[] }) => setCollectionOrder(requireSupabase(), input),
+    // Show the new order straight away; the refetch confirms it (or undoes it on error).
+    onMutate: (input) => {
+      queryClient.setQueryData<CollectionSummary[]>(keys.collections, (old) =>
+        old?.map((c) => {
+          if (c.id !== input.id) return c;
+          const byId = new Map(c.items.map((i) => [i.id, i]));
+          return { ...c, items: input.itemIds.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : [])) };
+        }),
+      );
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: keys.collections }),
+  });
+}
+
+export function useUpdateShoppingItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; checked?: boolean; quantity?: number }) =>
+      updateShoppingItem(requireSupabase(), input.id, input),
+    onMutate: (input) => {
+      queryClient.setQueryData<CollectionSummary[]>(keys.collections, (old) =>
+        old?.map((c) => ({
+          ...c,
+          items: c.items.map((i) =>
+            i.id === input.id
+              ? { ...i, checked: input.checked ?? i.checked, quantity: input.quantity ?? i.quantity }
+              : i,
+          ),
+        })),
+      );
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: keys.collections }),
+  });
+}
+
+export function useMarkPurchased() {
+  const refresh = useRefreshLibrary();
+  return useMutation({
+    mutationFn: (input: { itemId: string; remove: boolean }) => markPurchased(requireSupabase(), input),
+    onSettled: () => refresh(),
   });
 }

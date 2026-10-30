@@ -109,6 +109,7 @@ export type Database = {
           created_at: string;
           description: string | null;
           id: string;
+          look: Database["public"]["Enums"]["collection_look"];
           name: string;
           type: Database["public"]["Enums"]["collection_type"];
           updated_at: string;
@@ -121,6 +122,7 @@ export type Database = {
           created_at?: string;
           description?: string | null;
           id?: string;
+          look?: Database["public"]["Enums"]["collection_look"];
           name: string;
           type: Database["public"]["Enums"]["collection_type"];
           updated_at?: string;
@@ -132,6 +134,7 @@ export type Database = {
           created_at?: string;
           description?: string | null;
           id?: string;
+          look?: Database["public"]["Enums"]["collection_look"];
           name?: string;
           type?: Database["public"]["Enums"]["collection_type"];
           updated_at?: string;
@@ -439,6 +442,7 @@ export type Database = {
           created_at: string;
           description: string | null;
           id: string;
+          look: Database["public"]["Enums"]["collection_look"];
           name: string;
           type: Database["public"]["Enums"]["collection_type"];
           updated_at: string;
@@ -518,6 +522,7 @@ export type Database = {
     };
     Enums: {
       catalog_status: "active" | "archived";
+      collection_look: "board" | "mini_shelf" | "pouch" | "basket";
       collection_type: "custom" | "shopping" | "shelf";
       ownership_status: "owned" | "wishlist" | "finished";
       product_category:
@@ -660,6 +665,7 @@ export const Constants = {
   public: {
     Enums: {
       catalog_status: ["active", "archived"],
+      collection_look: ["board", "mini_shelf", "pouch", "basket"],
       collection_type: ["custom", "shopping", "shelf"],
       ownership_status: ["owned", "wishlist", "finished"],
       product_category: [

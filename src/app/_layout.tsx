@@ -79,6 +79,9 @@ function RootNavigator() {
         <Stack.Screen name="shelf" options={{ presentation: 'modal' }} />
         <Stack.Screen name="settings" />
         <Stack.Screen name="collection/[id]" />
+        <Stack.Screen name="collection/new" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="collection/add" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="collection/pick" options={{ presentation: 'modal' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="(auth)" />

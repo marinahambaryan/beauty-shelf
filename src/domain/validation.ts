@@ -61,3 +61,9 @@ export const finishedDateSchema = z
   .trim()
   .refine((v) => v === '' || (/^\d{4}-\d{2}-\d{2}$/.test(v) && isRealDate(v)), 'Use a date like 2026-10-28.')
   .transform((v) => (v.length ? v : null));
+
+export const collectionNameSchema = z
+  .string()
+  .trim()
+  .min(1, 'Give your collection a name.')
+  .max(80, 'Keep the name under 80 characters.');

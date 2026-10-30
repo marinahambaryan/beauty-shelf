@@ -71,3 +71,7 @@ The handwriting above a product on the shelf ("every day", "holy grail") is stor
 ## D18 · Three tabs, floating
 Following the Shelf + Pinboard design, the app has three tabs — Home, Search, Profile — in a floating pill. Adding happens from Search (or the + next to your products); the library lives under Profile → Products, collections under Profile → Collections, and account settings on their own page. Someone else's profile is designed but not built: every library is still private.
 
+## D19 · A collection has a look, chosen when it's made
+Collections are drawn like the real things people keep products in — a mini glass shelf, a zip pouch, a wire basket — or as a plain photo board. The look is chosen on the New collection page (previewed with the person's own products) and can be changed from the collection's menu; it is only presentation and is stored as `collections.look` (enum, default `board`, migration `20261031000000_collection_looks.sql`). The curated shelf is always drawn as a shelf and the shopping list as a board. Adding to the shopping list stores the product (catalogue shade or manual product), not the library entry, so an item survives the entry moving to Finished or being deleted; "Bought it" goes through `mark_shopping_item_purchased`, which makes or updates the Owned entry.
+*Reversal:* drop the column; every collection renders as a board.
+

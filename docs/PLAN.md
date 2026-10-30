@@ -38,10 +38,13 @@ _Last updated 27 Oct 2026._
 ## Design pass — Shelf + Pinboard (done, 30 Oct 2026)
 Black & white Pinterest-style UI, floating three-tab bar, Home shelf with handwritten notes, Edit shelf (pick, Move earlier/later, notes, Save via `save_shelf_layout`), Search board, Profile with Products/Collections, Settings. See D17–D18.
 
-## Milestone 3 — Collections + Shopping List (next)
+## Milestone 3 — Collections + Shopping List (done, 31 Oct 2026)
+Done: create/rename/delete with a look per collection (D19), multi-select add, Move earlier/later, Shopping List with quantity, ticks and Bought it, Save to collection from the product page.
+
+Original scope:
 Create/rename/delete custom collections, multi-select library picker, reorder (`set_collection_order`), Shopping List with quantity, check-off and "Mark purchased" confirmation (`mark_shopping_item_purchased`).
 
-## Milestone 4 — Curated shelf editor
+## Milestone 4 — Curated shelf editor (next)
 Builds on Edit shelf: multiple shelves, long-press drag with placeholder + haptics, Move earlier/later accessibility actions, Save/Cancel (only Save calls `save_shelf`), full-shelf replace flow, list/grid fallback.
 
 ## Milestone 5 — Polish + hardening

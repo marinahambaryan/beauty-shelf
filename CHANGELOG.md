@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 — Milestone 3: collections and the Shopping List (31 Oct 2026)
+
+### Added
+- **New collection** (Profile → Collections → +): a name and a look — mini shelf, pouch, wire basket or board — previewed with your own products (D19).
+- Collections are drawn in their look on your profile: mini shelves take a full row, pouches, baskets and boards sit two to a row.
+- **Collection page**: the collection in its look, its products, **Add products** (pick several from your library at once), **Edit** to move products earlier/later or take them out, and a ••• menu to rename, change the look or delete (products stay in your library).
+- **Shopping List**: tick things off, set how many (1–99), take things off, and **Bought it — add to library** puts the product in your library as Owned, then takes it off the list or keeps it ticked.
+- **Save to collection** (+ on a product page): tick the collections and the shopping list the product belongs in, or start a new collection with it.
+- Migration `collections.look`; tests: 2 database tests (looks, rename with version check, delete, membership, reorder, shopping items), 9 unit tests (collection rules, name check).
+
 ## 0.4.0 — Design: Shelf + Pinboard (30 Oct 2026)
 
 ### Changed

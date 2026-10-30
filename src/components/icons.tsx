@@ -10,6 +10,8 @@ export type IconName =
   | 'back'
   | 'close'
   | 'plus'
+  | 'minus'
+  | 'trash'
   | 'check'
   | 'camera'
   | 'chevronRight'
@@ -65,6 +67,10 @@ export function Icon({
         <Path {...stroke} d="M6 6l12 12M18 6 6 18" />
       ) : name === 'plus' ? (
         <Path {...stroke} d="M12 5v14M5 12h14" />
+      ) : name === 'minus' ? (
+        <Path {...stroke} d="M5 12h14" />
+      ) : name === 'trash' ? (
+        <Path {...stroke} d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5" />
       ) : name === 'check' ? (
         <Path {...stroke} d="m5 12 5 5 9-10" />
       ) : name === 'camera' ? (

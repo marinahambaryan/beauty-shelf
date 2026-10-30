@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -181,7 +181,14 @@ function Editor({
       />
 
       <View style={styles.actions}>
-        <ShelfToggle entryId={entry.id} name={entry.name} />
+        <View style={styles.actionsLeft}>
+          <IconButton
+            icon="plus"
+            onPress={() => router.push({ pathname: '/collection/pick', params: { entry: entry.id } })}
+            accessibilityLabel="Save to a collection or the shopping list"
+          />
+          <ShelfToggle entryId={entry.id} name={entry.name} />
+        </View>
         <Pressable
           onPress={() => {
             const i = OWNERSHIP_STATUSES.indexOf(form.ownershipStatus);
@@ -343,6 +350,7 @@ const styles = StyleSheet.create({
   danger: { color: colors.danger },
   heroBack: { position: 'absolute', top: 12, left: 12 },
   actions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
+  actionsLeft: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexShrink: 1 },
   shelfToggle: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexShrink: 1, flexWrap: 'wrap' },
   status: {
     height: 44,

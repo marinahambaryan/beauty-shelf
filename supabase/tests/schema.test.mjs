@@ -463,3 +463,56 @@ describe('account deletion', () => {
     }
   });
 });
+
+describe('collections: looks, rename, delete, membership', () => {
+  test('a custom collection keeps its look, can be renamed with a version check and deleted', async () => {
+    const u = await createUser('looks');
+    const c = await as(u, (q) =>
+      q("insert into collections (type, name, look) values ('custom', 'Travel kit', 'pouch') returning id, version, look").then((r) => r[0]));
+    assert.equal(c.look, 'pouch');
+    const renamed = await as(u, (q) =>
+      q("update collections set name = 'Weekend bag', look = 'basket' where id = $1 and version = $2 returning version", [c.id, c.version]));
+    assert.equal(renamed.length, 1);
+    const stale = await as(u, (q) =>
+      q("update collections set name = 'Nope' where id = $1 and version = $2 returning id", [c.id, c.version]));
+    assert.equal(stale.length, 0, 'a stale rename changes nothing');
+    await expectDenied(u, (q) => q("update collections set look = 'sparkly' where id = $1", [c.id]), /invalid input value/);
+
+    const other = await createUser('looks-other');
+    const theirs = await as(other, (q) => q('delete from collections where id = $1 returning id', [c.id]));
+    assert.equal(theirs.length, 0, 'nobody else can delete it');
+    const mine = await as(u, (q) => q('delete from collections where id = $1 returning id', [c.id]));
+    assert.equal(mine.length, 1);
+  });
+
+  test('items can be added, reordered and removed; the shopping list takes products', async () => {
+    const u = await createUser('members');
+    const variants = await as(u, (q) => q('select id from product_variants order by id limit 3'));
+    const ids = await as(u, async (q) => {
+      const out = [];
+      for (const v of variants) out.push((await addVariant(q, v.id)).library_item_id);
+      return out;
+    });
+    const c = await as(u, (q) =>
+      q("insert into collections (type, name, look) values ('custom', 'Morning', 'mini_shelf') returning id, version").then((r) => r[0]));
+    const rows = await as(u, (q) =>
+      q('insert into collection_items (collection_id, library_item_id) select $1, unnest($2::uuid[]) returning id', [c.id, ids]));
+    const reversed = rows.map((r) => r.id).reverse();
+    await as(u, (q) => q('select set_collection_order($1, $2, $3)', [c.id, reversed, c.version]));
+    const order = await as(u, (q) => q('select id from collection_items where collection_id = $1 order by sort_order', [c.id]));
+    assert.deepEqual(order.map((r) => r.id), reversed);
+    await as(u, (q) => q('delete from collection_items where id = $1', [reversed[0]]));
+    const left = await as(u, (q) => q('select count(*)::int as n from collection_items where collection_id = $1', [c.id]));
+    assert.equal(left[0].n, 2);
+
+    const list = await as(u, (q) => shoppingListId(q));
+    const [item] = await as(u, (q) =>
+      q('insert into collection_items (collection_id, catalog_variant_id) values ($1, $2) returning id, checked, desired_quantity', [list, variants[0].id]));
+    assert.equal(item.checked, false);
+    assert.equal(item.desired_quantity, 1);
+    await as(u, (q) => q('update collection_items set desired_quantity = 3, checked = true where id = $1', [item.id]));
+    const [after] = await as(u, (q) => q('select desired_quantity, checked from collection_items where id = $1', [item.id]));
+    assert.deepEqual([after.desired_quantity, after.checked], [3, true]);
+  });
+});
+

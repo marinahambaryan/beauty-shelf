@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { CollectionBoard, entriesOf } from '@/components/collection-board';
+import { CollectionCard, displayItems, isWide, lookOf } from '@/components/collection-looks';
 import { ProductTile } from '@/components/ProductRow';
 import {
   AppText,
@@ -64,8 +64,23 @@ export default function ProfileScreen() {
 
   const rows: (typeof products)[] = [];
   for (let i = 0; i < products.length; i += 3) rows.push(products.slice(i, i + 3));
+  // Mini shelves take a whole row; pouches, baskets and boards sit two to a row.
   const boardRows: (typeof boards)[] = [];
-  for (let i = 0; i < boards.length; i += 2) boardRows.push(boards.slice(i, i + 2));
+  let pair: typeof boards = [];
+  for (const c of boards) {
+    if (isWide(lookOf(c))) {
+      if (pair.length) boardRows.push(pair);
+      pair = [];
+      boardRows.push([c]);
+    } else {
+      pair.push(c);
+      if (pair.length === 2) {
+        boardRows.push(pair);
+        pair = [];
+      }
+    }
+  }
+  if (pair.length) boardRows.push(pair);
 
   return (
     <Screen contentStyle={styles.content}>
@@ -93,9 +108,13 @@ export default function ProfileScreen() {
             onChangeText={setQuery}
           />
         </View>
-        {tab === 'products' ? (
-          <IconButton icon="plus" tone="plain" iconSize={28} onPress={() => router.push('/add')} accessibilityLabel="Add product" />
-        ) : null}
+        <IconButton
+          icon="plus"
+          tone="plain"
+          iconSize={28}
+          onPress={() => router.push(tab === 'products' ? '/add' : '/collection/new')}
+          accessibilityLabel={tab === 'products' ? 'Add product' : 'New collection'}
+        />
       </View>
 
       {tab === 'products' ? (
@@ -142,20 +161,24 @@ export default function ProfileScreen() {
       ) : collections.isError ? (
         <ErrorState message={toAppError(collections.error).message} onRetry={() => collections.refetch()} />
       ) : boards.length === 0 ? (
-        <EmptyState title="No collections yet" body="Your shelf and lists show up here. Making your own collections comes next." />
+        <EmptyState
+          title={query.trim() ? `No collections called “${query.trim()}”` : 'No collections yet'}
+          body="Group products the way you keep them: a travel pouch, a basket of minis, a shelf for mornings."
+          action={<Button label="New collection" onPress={() => router.push('/collection/new')} />}
+        />
       ) : (
         <View style={styles.boards}>
           {boardRows.map((row, r) => (
             <View key={r} style={styles.boardRow}>
               {row.map((c) => (
-                <CollectionBoard
+                <CollectionCard
                   key={c.id}
                   collection={c}
-                  entries={entriesOf(c, data)}
+                  items={displayItems(c, data)}
                   onPress={() => router.push({ pathname: '/collection/[id]', params: { id: c.id } })}
                 />
               ))}
-              {row.length === 1 ? <View style={styles.flex} /> : null}
+              {row.length === 1 && row[0] && !isWide(lookOf(row[0])) ? <View style={styles.flex} /> : null}
             </View>
           ))}
         </View>
@@ -174,6 +197,6 @@ const styles = StyleSheet.create({
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   grid: { gap: 6 },
   gridRow: { flexDirection: 'row', gap: 6 },
-  boards: { gap: space.lg },
-  boardRow: { flexDirection: 'row', gap: 10 },
+  boards: { gap: space.xl },
+  boardRow: { flexDirection: 'row', gap: 14, alignItems: 'flex-end' },
 });
