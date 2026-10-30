@@ -57,5 +57,11 @@ export function toAppError(error: unknown): AppError {
   if (code === '23514' || code === '22023' || code === '23505') {
     return { kind: 'validation', message: 'That change isn’t allowed. Please check the details and try again.' };
   }
+  // In development, say what actually failed so it can be reported and fixed.
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    const detail = [code, message].filter(Boolean).join(' ').slice(0, 300);
+    console.warn('[toAppError]', error);
+    if (detail) return { kind: 'unknown', message: `Something went wrong. Please try again.\n\nDetails: ${detail}` };
+  }
   return { kind: 'unknown', message: 'Something went wrong. Please try again.' };
 }
