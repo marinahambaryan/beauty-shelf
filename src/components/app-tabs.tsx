@@ -16,13 +16,13 @@ export default function AppTabs() {
       <TabSlot />
       {/* TabList must stay a direct child of Tabs: that is where the router finds the tabs. */}
       <TabList style={[styles.bar, { bottom: Math.max(insets.bottom, space.lg) + space.sm }]}>
-        <TabTrigger name="(home)" href="/" asChild>
+        <TabTrigger name="(home)" href="/(tabs)/(home)" asChild>
           <TabButton icon="home" label="Home" />
         </TabTrigger>
-        <TabTrigger name="search" href="/search" asChild>
+        <TabTrigger name="search" href="/(tabs)/search" asChild>
           <TabButton icon="search" label="Search" />
         </TabTrigger>
-        <TabTrigger name="profile" href="/profile" asChild>
+        <TabTrigger name="profile" href="/(tabs)/profile" asChild>
           <TabButton icon="profile" label="Profile" />
         </TabTrigger>
       </TabList>
