@@ -1,6 +1,8 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 import type { ProductCategory } from '@/domain/library';
+import { pickShelf, useCurrentShelfId } from '@/lib/current-shelf';
 import { requireSupabase } from '@/lib/supabase';
 import { supabaseCatalog } from './catalog';
 import { listCollections } from './collections';
@@ -23,10 +25,18 @@ export const useLibraryCounts = () =>
 export const useCollections = () =>
   useQuery({ queryKey: keys.collections, queryFn: () => listCollections(requireSupabase()) });
 export const useProfile = () => useQuery({ queryKey: keys.profile, queryFn: () => getProfile(requireSupabase()) });
-/** The curated shelf (at most one per person for now), read from the collections list. */
-export function useShelf() {
+/** Your shelves, oldest first, read from the collections list. */
+export function useShelves() {
   const collections = useCollections();
-  return { ...collections, shelf: collections.data?.find((c) => c.type === 'shelf') ?? null };
+  const shelves = useMemo(() => (collections.data ?? []).filter((c) => c.type === 'shelf'), [collections.data]);
+  return { ...collections, shelves };
+}
+
+/** The shelf Home shows: the one picked on this device, else the first. */
+export function useShelf() {
+  const result = useShelves();
+  const remembered = useCurrentShelfId();
+  return { ...result, shelf: pickShelf(result.shelves, remembered) };
 }
 
 /** One library entry, read from the library list so every screen agrees on it. */

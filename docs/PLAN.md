@@ -44,8 +44,11 @@ Done: create/rename/delete with a look per collection (D19), multi-select add, M
 Original scope:
 Create/rename/delete custom collections, multi-select library picker, reorder (`set_collection_order`), Shopping List with quantity, check-off and "Mark purchased" confirmation (`mark_shopping_item_purchased`).
 
-## Milestone 4 — Curated shelf editor (next)
+## Milestone 4 — Curated shelf editor (done, 1 Nov 2026)
+Done: several shelves with a switcher on Home, drag-to-arrange with handles, full-shelf replace, rename/delete (D20).
+
+Original scope:
 Builds on Edit shelf: multiple shelves, long-press drag with placeholder + haptics, Move earlier/later accessibility actions, Save/Cancel (only Save calls `save_shelf`), full-shelf replace flow, list/grid fallback.
 
-## Milestone 5 — Polish + hardening
+## Milestone 5 — Polish + hardening (next)
 Editorial typeface + icon set, image handling, offline cache persistence and connectivity state, accessibility pass (dynamic type, screen reader, reduced motion), performance on 500+ item libraries, Maestro or Detox smoke test, CI workflow running `npm run check` and `npm run test:db`.

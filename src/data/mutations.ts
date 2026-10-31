@@ -98,8 +98,19 @@ export function useDeleteItem() {
 export function useSaveShelf() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { shelf: { id: string; version: number } | null; placements: ShelfPlacement[] }) =>
-      saveShelfLayout(requireSupabase(), input.shelf, input.placements),
+    /** Layout first (creating the shelf if needed), then the name if it changed. */
+    mutationFn: async (input: {
+      shelf: { id: string; version: number; name: string } | null;
+      placements: ShelfPlacement[];
+      name: string;
+    }) => {
+      const db = requireSupabase();
+      const saved = await saveShelfLayout(db, input.shelf, input.placements, input.name);
+      if (input.shelf && input.shelf.name !== input.name) {
+        await updateCollection(db, { id: saved.id, version: saved.version, patch: { name: input.name } });
+      }
+      return saved.id;
+    },
     // Also on error: a version conflict means the stored shelf moved on, so fetch it.
     onSettled: () => queryClient.invalidateQueries({ queryKey: keys.collections }),
   });

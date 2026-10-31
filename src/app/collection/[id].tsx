@@ -6,7 +6,7 @@ import { displayItems, LookArt, type DisplayItem } from '@/components/collection
 import { Icon } from '@/components/icons';
 import { LookPicker } from '@/components/look-picker';
 import { describe, openItem, ProductTile } from '@/components/ProductRow';
-import { Bottle, PER_LEDGE, ShelfLedge } from '@/components/shelf';
+import { Bottle, ledgesOf, ShelfLedge } from '@/components/shelf';
 import {
   AppText,
   Button,
@@ -98,7 +98,7 @@ function Detail({ collection, library }: { collection: CollectionSummary; librar
         title={collection.name}
         right={
           isShelf ? (
-            <IconButton icon="edit" onPress={() => router.push('/shelf')} accessibilityLabel="Edit shelf" />
+            <IconButton icon="edit" onPress={() => router.push({ pathname: '/shelf', params: { id: collection.id } })} accessibilityLabel="Edit shelf" />
           ) : isCustom ? (
             <IconButton
               icon="more"
@@ -229,8 +229,7 @@ function RenamePanel({ name, saving, onSave, onCancel }: { name: string; saving:
 
 function ShelfView({ collection, items }: { collection: CollectionSummary; items: DisplayItem[] }) {
   const notes = new Map(collection.items.map((i) => [i.id, i.note]));
-  const ledges: DisplayItem[][] = [];
-  for (let i = 0; i < items.length; i += PER_LEDGE) ledges.push(items.slice(i, i + PER_LEDGE));
+  const ledges = ledgesOf(items);
   return (
     <View style={styles.shelves}>
       {ledges.map((ledge, i) => (

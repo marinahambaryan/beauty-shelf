@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 — Milestone 4: more shelves, drag to arrange (1 Nov 2026)
+
+### Added
+- **Several shelves**: tap the shelf's name on Home to switch shelves or start a **New shelf**. Each shelf has its own name, up to 12 products and its own notes; Home remembers which one you were looking at on this device (D20).
+- **Drag to arrange**: in Edit shelf, drag a product by its handle (⋮⋮) to move it; the rest slide out of the way. Screen readers get Move earlier / Move later on the handle. A light tap of haptics on phones.
+- **Full shelf**: adding a 13th product asks which product it replaces.
+- **Rename and delete** a shelf from its editor (products stay in your library).
+- Migration drops the one-shelf limit; `expo-haptics`. Tests: 1 database test (several shelves), 4 unit tests (drop position, which shelf Home shows).
+
 ## 0.5.0 — Milestone 3: collections and the Shopping List (31 Oct 2026)
 
 ### Added

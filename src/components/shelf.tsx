@@ -133,6 +133,16 @@ export type ShelfProduct = {
 /** Up to this many products stand on one ledge. */
 export const PER_LEDGE = 4;
 
+/** Fills ledges of four, balancing the last two so a ledge never holds a lone product unless it must. */
+export function ledgesOf<T>(items: readonly T[]): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += PER_LEDGE) out.push(items.slice(i, i + PER_LEDGE));
+  const last = out[out.length - 1];
+  const prev = out[out.length - 2];
+  if (last && prev && last.length === 1) last.unshift(prev.pop() as T);
+  return out;
+}
+
 /**
  * One glass ledge of products, each with its handwritten note above it and a little
  * arrow pointing down at it. Notes alternate tilt and height so neighbours don't collide.

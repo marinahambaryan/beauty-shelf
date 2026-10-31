@@ -194,25 +194,30 @@ export const SHELF_CAPACITY = 12;
 
 /**
  * Saves the whole shelf — which products, their order and the note on each — in one
- * version-checked call. The first save creates the shelf. Returns the new version.
+ * version-checked call. Saving a shelf that doesn't exist yet creates it with `name`.
+ * Returns the shelf's id and new version.
  */
 export async function saveShelfLayout(
   db: Supabase,
   shelf: { id: string; version: number } | null,
   placements: readonly ShelfPlacement[],
-): Promise<number> {
+  name = 'My shelf',
+): Promise<{ id: string; version: number }> {
   let target = shelf;
   if (!target) {
-    const { data, error } = await db.from('collections').insert({ type: 'shelf', name: 'My shelf' }).select('id, version').single();
+    const { data, error } = await db.from('collections').insert({ type: 'shelf', name }).select('id, version').single();
     if (error) throw error;
     target = data;
   }
-  const { data, error } = await db.rpc('save_shelf_layout', {
+  const { error } = await db.rpc('save_shelf_layout', {
     p_collection_id: target.id,
     p_library_item_ids: placements.map((p) => p.libraryItemId),
     p_notes: placements.map((p) => p.note?.trim() ?? ''),
     p_expected_version: target.version,
   });
   if (error) throw error;
-  return data;
+  // claim_collection_version bumped the version; fetch it so a rename can follow.
+  const { data: after, error: readError } = await db.from('collections').select('id, version').eq('id', target.id).single();
+  if (readError) throw readError;
+  return after;
 }

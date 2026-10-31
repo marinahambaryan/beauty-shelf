@@ -401,12 +401,27 @@ describe('curated shelf', () => {
     await expectDenied(bob, (q) => q('select save_shelf_layout($1, $2, $3, $4)', [shelf.id, [], [], v2 + 1]), /not found/);
   });
 
-  test('one shelf per user in the MVP', async () => {
+  test('several shelves per person, each with its own products and capacity', async () => {
     const u = await createUser('twoshelves');
-    await expectDenied(u, async (q) => {
-      await q("insert into collections (type, name) values ('shelf', 'A')");
-      await q("insert into collections (type, name) values ('shelf', 'B')");
-    }, /duplicate key/);
+    const variants = await as(u, (q) => q('select id from product_variants order by id limit 2'));
+    const ids = await as(u, async (q) => {
+      const out = [];
+      for (const v of variants) out.push((await addVariant(q, v.id)).library_item_id);
+      return out;
+    });
+    const [a, b] = await as(u, async (q) => [
+      (await q("insert into collections (type, name) values ('shelf', 'Bathroom') returning id, version"))[0],
+      (await q("insert into collections (type, name) values ('shelf', 'Vanity') returning id, version"))[0],
+    ]);
+    await as(u, (q) => q('select save_shelf_layout($1, $2, $3, $4)', [a.id, ids, ['every day', ''], a.version]));
+    await as(u, (q) => q('select save_shelf_layout($1, $2, $3, $4)', [b.id, [ids[1]], ['travel'], b.version]));
+    const rows = await as(u, (q) =>
+      q('select c.name, ci.note from collection_items ci join collections c on c.id = ci.collection_id order by c.name, ci.sort_order'));
+    assert.deepEqual(rows.map((r) => [r.name, r.note]), [['Bathroom', 'every day'], ['Bathroom', null], ['Vanity', 'travel']]);
+    // The same product can stand on two shelves; deleting a shelf leaves the other alone.
+    await as(u, (q) => q('delete from collections where id = $1', [a.id]));
+    const left = await as(u, (q) => q("select count(*)::int as n from collections where type = 'shelf'"));
+    assert.equal(left[0].n, 1);
   });
 });
 

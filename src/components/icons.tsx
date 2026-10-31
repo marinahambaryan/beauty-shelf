@@ -12,6 +12,7 @@ export type IconName =
   | 'plus'
   | 'minus'
   | 'trash'
+  | 'grip'
   | 'check'
   | 'camera'
   | 'chevronRight'
@@ -71,6 +72,10 @@ export function Icon({
         <Path {...stroke} d="M5 12h14" />
       ) : name === 'trash' ? (
         <Path {...stroke} d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5" />
+      ) : name === 'grip' ? (
+        <>
+          {[8, 16].map((x) => [6, 12, 18].map((y) => <Circle key={`${x}-${y}`} cx={x} cy={y} r={1.6} fill={color} />))}
+        </>
       ) : name === 'check' ? (
         <Path {...stroke} d="m5 12 5 5 9-10" />
       ) : name === 'camera' ? (
