@@ -14,9 +14,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
     let active = true;
-    supabase.auth
+    const client = supabase;
+    client.auth
       .getSession()
-      .then(({ data }) => active && setState({ session: data.session, ready: true }))
+      .then(({ data }) => {
+        if (active) setState({ session: data.session, ready: true });
+        if (data.session) void dropIfAccountGone(client);
+      })
       .catch(() => active && setState({ session: null, ready: true }));
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       if (active) setState({ session, ready: true });
@@ -28,6 +32,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
+}
+
+/**
+ * A saved sign-in can outlive its account (deleted elsewhere, or a reset local database).
+ * Ask the server once; if it says the user doesn't exist, sign out on this device so the
+ * person signs in again instead of every save failing. Offline or other errors: keep it.
+ */
+async function dropIfAccountGone(client: NonNullable<typeof supabase>) {
+  const { error } = await client.auth.getUser();
+  if (!error) return;
+  const status = 'status' in error ? (error.status as number | undefined) : undefined;
+  const code = 'code' in error ? (error.code as string | undefined) : undefined;
+  if (code === 'user_not_found' || status === 401 || status === 403) {
+    await client.auth.signOut({ scope: 'local' }).catch(() => {});
+  }
 }
 
 export const useAuth = () => useContext(AuthContext);

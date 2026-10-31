@@ -51,6 +51,10 @@ export function toAppError(error: unknown): AppError {
   if (/email not confirmed/i.test(message)) {
     return { kind: 'auth', message: 'Please confirm your email first — check your inbox for the link.' };
   }
+  // A saved sign-in whose account no longer exists (e.g. after a local database reset).
+  if (code === '23503' && /_user_id_fkey/.test(message)) {
+    return { kind: 'auth', message: 'Your sign-in is out of date. Sign out and sign in again.' };
+  }
   if (code === 'P0002' || code === 'PGRST116') {
     return { kind: 'not_found', message: 'We couldn’t find that item. It may have been deleted.' };
   }
