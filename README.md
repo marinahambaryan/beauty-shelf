@@ -31,6 +31,36 @@ Native modules are SDK 58 builds; if Expo Go for SDK 58 isn't available on your 
 
 Local auth has email confirmation turned off (`supabase/config.toml`). In a hosted project, enable it and configure SMTP; the sign-up screen already handles the "check your inbox" state.
 
+### Hosted project (works anywhere, not just on your Wi-Fi)
+
+The hosted Supabase project is **beauty-shelf** (`ixxctowknxratiuwtcuu`, Frankfurt). Its URL and publishable key are public client values; they are in `eas.json` for builds.
+
+To point your dev app at it instead of the local stack, set `.env.local` to:
+```
+EXPO_PUBLIC_SUPABASE_URL=https://ixxctowknxratiuwtcuu.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_wgc6VF_rhpfhT4WOQyzQ1Q_0HyjHRgz
+```
+and restart with `npx expo start -c`. Accounts and data in the hosted project are separate from your local ones.
+
+Catalogue packshots: upload the files in `supabase/catalog-images/` to the `catalog-images` bucket (Dashboard → Storage), or `npx supabase link --project-ref ixxctowknxratiuwtcuu && npx supabase seed buckets --linked`.
+
+New migrations: `npx supabase link --project-ref ixxctowknxratiuwtcuu` once, then `npx supabase db push`.
+
+### Installable builds (EAS)
+
+```bash
+npm install -g eas-cli
+eas login
+eas init                                   # once: links the app to your Expo account
+eas build --profile preview --platform android   # an .apk you install from a link
+eas build --profile preview --platform ios       # needs an Apple Developer account
+```
+Profiles are in `eas.json` (`development`, `preview`, `production`); all use the hosted project.
+
+### Continuous integration
+
+`.github/workflows/check.yml` runs on every push: typecheck, lint, unit tests, and the database tests against a Postgres 17 service.
+
 ### Account deletion
 Deploy the Edge Function so the in-app "Delete account" works:
 ```bash

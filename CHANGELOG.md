@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0 — Hosted project, builds, CI (31 Oct 2026)
+- Hosted Supabase project `beauty-shelf` (Frankfurt) with all migrations, the catalogue and the delete-account function (D21).
+- `eas.json` build profiles pointing at it; iOS export-compliance flag in `app.json`.
+- GitHub Actions: typecheck, lint, unit and database tests on every push.
+- The app signs out a saved login whose account no longer exists.
+
 ## 0.6.0 — Milestone 4: more shelves, drag to arrange (1 Nov 2026)
 
 ### Added
