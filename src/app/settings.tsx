@@ -9,6 +9,7 @@ import { displayNameSchema } from '@/domain/validation';
 import { useAuth, useUserId } from '@/lib/auth';
 import { toAppError } from '@/lib/errors';
 import { goBack } from '@/lib/navigation';
+import { useSignOut } from '@/lib/use-sign-out';
 import { requireSupabase } from '@/lib/supabase';
 import { colors, radius, space } from '@/theme/tokens';
 
@@ -37,13 +38,7 @@ export default function SettingsScreen() {
     },
   });
 
-  const signOut = useMutation({
-    mutationFn: async () => {
-      const { error } = await requireSupabase().auth.signOut();
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.clear(),
-  });
+  const signOut = useSignOut();
 
   // Web has no native alert with buttons, so it confirms inline instead.
   const [confirmInline, setConfirmInline] = useState(false);
@@ -104,7 +99,7 @@ export default function SettingsScreen() {
             chevron={false}
             accessibilityLabel={`Signed in as ${session?.user.email ?? 'unknown email'}`}
           />
-          <Row title={signOut.isPending ? 'Signing out…' : 'Sign out'} onPress={() => signOut.mutate()} />
+          <Row title={signOut.isPending ? 'Logging out…' : 'Log out'} onPress={() => signOut.mutate()} />
           <Row
             title={remove.isPending ? 'Deleting account…' : 'Delete account'}
             tone="danger"

@@ -12,14 +12,17 @@ import {
   ErrorState,
   IconButton,
   LoadingState,
+  Notice,
   Screen,
   SearchField,
+  TextAction,
   UnderlineTabs,
 } from '@/components/ui';
 import { useCollections, useLibrary, useProfile } from '@/data/queries';
 import { LIBRARY_VIEWS, libraryViewLabel, matchesQuery, sortLibrary, type LibraryView } from '@/domain/library';
 import { useAuth } from '@/lib/auth';
 import { toAppError } from '@/lib/errors';
+import { useSignOut } from '@/lib/use-sign-out';
 import { colors, fonts, space } from '@/theme/tokens';
 
 type Tab = 'products' | 'collections';
@@ -33,6 +36,7 @@ const isView = (v: unknown): v is LibraryView => typeof v === 'string' && (LIBRA
 export default function ProfileScreen() {
   const params = useLocalSearchParams<{ tab?: string; view?: string }>();
   const { session } = useAuth();
+  const signOut = useSignOut();
   const profile = useProfile();
   const library = useLibrary();
   const collections = useCollections();
@@ -94,8 +98,14 @@ export default function ProfileScreen() {
           </AppText>
           <AppText variant="bodySoft">{`${data.length} ${data.length === 1 ? 'product' : 'products'} · private`}</AppText>
         </View>
+        <TextAction
+          label={signOut.isPending ? 'Logging out…' : 'Log out'}
+          onPress={() => signOut.mutate()}
+          disabled={signOut.isPending}
+        />
         <IconButton icon="settings" tone="plain" onPress={() => router.push('/settings')} accessibilityLabel="Settings" />
       </View>
+      {signOut.isError ? <Notice>{toAppError(signOut.error).message}</Notice> : null}
 
       <UnderlineTabs options={TABS} value={tab} onChange={setTab} />
 
