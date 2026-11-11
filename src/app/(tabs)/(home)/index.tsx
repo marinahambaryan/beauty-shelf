@@ -1,27 +1,31 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { openItem } from '@/components/ProductRow';
 import { ledgesOf, ShelfLedge, type ShelfProduct } from '@/components/shelf';
-import { Icon } from '@/components/icons';
 import { AppText, Button, ErrorState, IconButton, LoadingState, Screen } from '@/components/ui';
 import type { LibraryEntry } from '@/data/library';
-import { useLibrary, useShelf } from '@/data/queries';
+import { useLibrary, useRecentEvents, useShelf } from '@/data/queries';
+import { describeEvent, whenLabel } from '@/domain/events';
 import { OWNERSHIP_STATUSES, ownershipLabel, type OwnershipStatus } from '@/domain/library';
-import { setCurrentShelf } from '@/lib/current-shelf';
 import { toAppError } from '@/lib/errors';
-import { colors, fonts, space } from '@/theme/tokens';
+import { colors, fonts, radius, space } from '@/theme/tokens';
 
 /** Until the shelf is arranged, Home shows what's in use so it is never bare. */
 const FALLBACK_COUNT = 6;
 
 const describeEntry = (e: LibraryEntry) => [e.brand, e.name, e.variant].filter(Boolean).join(', ');
 
+/**
+ * Home: your shelf — the products you use now, every category on one shelf — then
+ * your recent activity and how many products you want, have and have used up.
+ * Only your own data; a feed of other people waits until there are followers.
+ */
 export default function HomeScreen() {
   const library = useLibrary();
   const shelf = useShelf();
-  const [switching, setSwitching] = useState(false);
+  const events = useRecentEvents();
   const data = useMemo(() => library.data ?? [], [library.data]);
 
   const counts = useMemo(() => {
@@ -52,6 +56,14 @@ export default function HomeScreen() {
     return { arranged: false, products: (using.length ? using : owned).slice(0, FALLBACK_COUNT).map((e) => toProduct(e, null)) };
   }, [data, shelf.shelf]);
 
+  const activity = useMemo(() => {
+    const names = new Map(data.map((e) => [e.id, e.name]));
+    return (events.data ?? []).flatMap((ev) => {
+      const name = names.get(ev.libraryItemId);
+      return name ? [{ ...ev, text: describeEvent(ev, name), when: whenLabel(ev.at) }] : [];
+    });
+  }, [events.data, data]);
+
   const ledges = ledgesOf(products);
   const editShelf = () =>
     router.push(shelf.shelf ? { pathname: '/shelf', params: { id: shelf.shelf.id } } : '/shelf');
@@ -60,59 +72,11 @@ export default function HomeScreen() {
   return (
     <Screen>
       <View style={styles.titleRow}>
-        <Pressable
-          onPress={() => setSwitching((v) => !v)}
-          accessibilityRole="button"
-          accessibilityLabel={`${name}. Switch shelf`}
-          accessibilityState={{ expanded: switching }}
-          style={({ pressed }) => [styles.titleButton, pressed && styles.pressed]}
-        >
-          <AppText variant="display" style={styles.title}>
-            {name.toLowerCase() === 'my shelf' ? 'My\nshelf' : name}
-          </AppText>
-          <View style={[styles.chevron, switching && styles.chevronOpen]}>
-            <Icon name="chevronDown" size={22} strokeWidth={2.6} />
-          </View>
-        </Pressable>
+        <AppText variant="display" style={styles.title} accessibilityRole="header">
+          {name.toLowerCase() === 'my shelf' ? 'My\nshelf' : name}
+        </AppText>
         {data.length ? <IconButton icon="edit" onPress={editShelf} accessibilityLabel={`Edit ${name}`} /> : null}
       </View>
-
-      {switching ? (
-        <View style={styles.switcher} accessibilityRole="menu">
-          {shelf.shelves.map((s) => {
-            const selected = s.id === shelf.shelf?.id;
-            return (
-              <Pressable
-                key={s.id}
-                onPress={() => {
-                  setCurrentShelf(s.id);
-                  setSwitching(false);
-                }}
-                accessibilityRole="menuitem"
-                accessibilityState={{ selected }}
-                style={({ pressed }) => [styles.switchRow, pressed && styles.pressed]}
-              >
-                <Text style={[styles.switchName, selected && styles.switchSelected]} numberOfLines={1}>
-                  {s.name}
-                </Text>
-                <Text style={styles.switchCount}>{s.itemCount}</Text>
-                {selected ? <Icon name="check" size={18} strokeWidth={2.4} /> : <View style={styles.checkSpace} />}
-              </Pressable>
-            );
-          })}
-          <Pressable
-            onPress={() => {
-              setSwitching(false);
-              router.push({ pathname: '/shelf', params: { new: '1' } });
-            }}
-            accessibilityRole="menuitem"
-            style={({ pressed }) => [styles.switchRow, styles.switchNew, pressed && styles.pressed]}
-          >
-            <Icon name="plus" size={18} strokeWidth={2.2} />
-            <Text style={styles.switchName}>New shelf</Text>
-          </Pressable>
-        </View>
-      ) : null}
 
       {library.isPending || shelf.isPending ? (
         <LoadingState label="Loading your shelf" />
@@ -120,10 +84,9 @@ export default function HomeScreen() {
         <ErrorState message={toAppError(library.error).message} onRetry={() => library.refetch()} />
       ) : data.length === 0 ? (
         <View style={styles.empty}>
-          <AppText variant="bodySoft">
-            Your shelf is empty. Add the products you own, want and finish, then arrange them here.
-          </AppText>
-          <Button label="Add product" onPress={() => router.push('/search')} />
+          <AppText variant="title">Your shelf is empty</AppText>
+          <AppText variant="bodySoft">Add the products you use every day. They’ll stand here, with your notes on the glass.</AppText>
+          <Button label="Add your first product" onPress={() => router.push('/search')} />
         </View>
       ) : (
         <>
@@ -134,30 +97,44 @@ export default function HomeScreen() {
           </View>
           {!arranged ? (
             <Pressable onPress={editShelf} accessibilityRole="button" style={({ pressed }) => pressed && styles.pressed}>
-              <Text style={styles.hint}>arrange your shelf & write on the glass →</Text>
+              <Text style={styles.hint}>pick what you use every day & write on the glass →</Text>
             </Pressable>
           ) : null}
 
-          <View style={styles.counts}>
-            {OWNERSHIP_STATUSES.map((s, i) => (
-              <View key={s} style={styles.countItem}>
-                {i > 0 ? (
-                  <Text style={styles.dot} accessible={false}>
-                    ·
-                  </Text>
-                ) : null}
+          {activity.length ? (
+            <View style={styles.activity}>
+              <AppText variant="section" accessibilityRole="header">
+                Your recent activity
+              </AppText>
+              {activity.map((a) => (
                 <Pressable
+                  key={a.id}
+                  onPress={() => openItem(a.libraryItemId)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${counts[s]} ${ownershipLabel[s].toLowerCase()}. Opens your products.`}
-                  onPress={() => router.navigate({ pathname: '/profile', params: { tab: 'products', view: s } })}
-                  hitSlop={{ top: 12, bottom: 12, left: 4, right: 4 }}
-                  style={({ pressed }) => pressed && styles.pressed}
+                  accessibilityLabel={`${a.text}, ${a.when}`}
+                  style={({ pressed }) => [styles.activityRow, pressed && styles.pressed]}
                 >
-                  <Text style={[styles.count, s === 'finished' && styles.countSoft]}>
-                    {counts[s]} {ownershipLabel[s].toLowerCase()}
+                  <Text style={styles.activityText} numberOfLines={2}>
+                    {a.text}
                   </Text>
+                  <Text style={styles.activityWhen}>{a.when}</Text>
                 </Pressable>
-              </View>
+              ))}
+            </View>
+          ) : null}
+
+          <View style={styles.counts}>
+            {OWNERSHIP_STATUSES.map((s) => (
+              <Pressable
+                key={s}
+                accessibilityRole="button"
+                accessibilityLabel={`${counts[s]} ${ownershipLabel[s].toLowerCase()}. Opens your products.`}
+                onPress={() => router.navigate({ pathname: '/profile', params: { tab: 'products', view: s } })}
+                style={({ pressed }) => [styles.countBox, pressed && styles.pressed]}
+              >
+                <Text style={styles.countNumber}>{counts[s]}</Text>
+                <Text style={styles.countLabel}>{ownershipLabel[s].toLowerCase()}</Text>
+              </Pressable>
             ))}
           </View>
         </>
@@ -168,37 +145,34 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: space.md },
-  titleButton: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, flexShrink: 1 },
   title: { flexShrink: 1 },
-  chevron: { marginBottom: 8 },
-  chevronOpen: { transform: [{ rotate: '180deg' }] },
-  switcher: {
-    marginTop: -space.sm,
-    borderRadius: 18,
-    padding: 6,
-    backgroundColor: colors.ground,
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.08)',
-  },
-  switchRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.md, borderRadius: 12 },
-  switchNew: { borderTopWidth: 1, borderColor: colors.rule, borderRadius: 0, marginTop: 4 },
-  switchName: { flex: 1, fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
-  switchSelected: { fontFamily: fonts.semibold },
-  switchCount: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkSoft },
-  checkSpace: { width: 18 },
   shelves: { gap: space.lg, marginTop: -space.sm },
-  empty: { gap: space.lg },
+  empty: { gap: space.md },
   hint: { fontFamily: fonts.hand, fontSize: 22, color: colors.inkSoft, transform: [{ rotate: '-1.5deg' }] },
-  counts: {
+  activity: { gap: space.xs, marginTop: space.sm },
+  activityRow: {
+    minHeight: 48,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'baseline',
-    borderTopWidth: 1,
-    borderColor: colors.ink,
-    paddingTop: space.md + 2,
+    alignItems: 'center',
+    gap: space.md,
+    borderBottomWidth: 1,
+    borderColor: colors.rule,
+    paddingVertical: space.sm,
   },
-  countItem: { flexDirection: 'row', alignItems: 'baseline' },
-  dot: { fontFamily: fonts.regular, fontSize: 15, color: colors.inkMuted, marginHorizontal: 6 },
-  count: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
-  countSoft: { fontFamily: fonts.regular, color: colors.inkSoft },
+  activityText: { flex: 1, fontFamily: fonts.regular, fontSize: 15, lineHeight: 21, color: colors.ink },
+  activityWhen: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSoft },
+  counts: { flexDirection: 'row', gap: space.sm, marginTop: space.sm },
+  countBox: {
+    flex: 1,
+    minHeight: 60,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.rule,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: space.sm,
+  },
+  countNumber: { fontFamily: fonts.semibold, fontSize: 18, color: colors.ink },
+  countLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSoft },
   pressed: { opacity: 0.5 },
 });

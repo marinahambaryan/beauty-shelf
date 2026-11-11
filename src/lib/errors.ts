@@ -40,7 +40,7 @@ export function toAppError(error: unknown): AppError {
     };
   }
   if (message === 'shelf_full') {
-    return { kind: 'shelf_full', message: 'Your shelf holds up to 12 products. Remove or replace one first.' };
+    return { kind: 'shelf_full', message: 'Your shelf holds up to 18 products. Remove or replace one first.' };
   }
   if (message === 'too_many_pending') {
     return { kind: 'validation', message: 'You have 20 products waiting for review. Try again once some are reviewed.' };

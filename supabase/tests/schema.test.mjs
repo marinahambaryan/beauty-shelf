@@ -335,7 +335,7 @@ describe('shopping list', () => {
 describe('curated shelf', () => {
   test('save_shelf persists order, enforces capacity, and rejects stale saves', async () => {
     const u = await createUser('curator');
-    const variants = await as(u, (q) => q('select id from product_variants order by id limit 13'));
+    const variants = await as(u, (q) => q('select id from product_variants order by id limit 19'));
     const libIds = await as(u, async (q) => {
       const ids = [];
       for (const v of variants) ids.push((await addVariant(q, v.id)).library_item_id);
@@ -344,30 +344,30 @@ describe('curated shelf', () => {
     const shelf = await as(u, (q) =>
       q("insert into collections (type, name) values ('shelf', 'Vanity') returning id, version").then((r) => r[0]));
 
-    const twelve = libIds.slice(0, 12).reverse();
-    const v2 = await as(u, (q) => q('select save_shelf($1, $2, $3) as v', [shelf.id, twelve, shelf.version]).then((r) => r[0].v));
+    const full = libIds.slice(0, 18).reverse();
+    const v2 = await as(u, (q) => q('select save_shelf($1, $2, $3) as v', [shelf.id, full, shelf.version]).then((r) => r[0].v));
     const saved = await as(u, (q) =>
       q('select library_item_id from collection_items where collection_id = $1 order by sort_order', [shelf.id]));
-    assert.deepEqual(saved.map((r) => r.library_item_id), twelve, 'reopening shows the saved order');
+    assert.deepEqual(saved.map((r) => r.library_item_id), full, 'reopening shows the saved order');
 
     await expectDenied(u, (q) => q('select save_shelf($1, $2, $3)', [shelf.id, libIds, v2]), /shelf_full/);
     await expectDenied(u, (q) =>
-      q('insert into collection_items (collection_id, library_item_id) values ($1, $2)', [shelf.id, libIds[12]]),
+      q('insert into collection_items (collection_id, library_item_id) values ($1, $2)', [shelf.id, libIds[18]]),
       /shelf_full/);
-    await expectDenied(u, (q) => q('select save_shelf($1, $2, $3)', [shelf.id, twelve.slice(1), shelf.version]),
+    await expectDenied(u, (q) => q('select save_shelf($1, $2, $3)', [shelf.id, full.slice(1), shelf.version]),
       /version_conflict/);
 
-    // Replace: drop one, add the 13th, at a specific position.
-    const replaced = [libIds[12], ...twelve.slice(1)];
+    // Replace: drop one, add the 19th, at a specific position.
+    const replaced = [libIds[18], ...full.slice(1)];
     await as(u, (q) => q('select save_shelf($1, $2, $3)', [shelf.id, replaced, v2]));
     const after = await as(u, (q) =>
       q('select library_item_id from collection_items where collection_id = $1 order by sort_order', [shelf.id]));
     assert.deepEqual(after.map((r) => r.library_item_id), replaced);
 
     // Deleting a library item removes its slot cleanly — no broken card.
-    await as(u, (q) => q('delete from library_items where id = $1', [libIds[12]]));
+    await as(u, (q) => q('delete from library_items where id = $1', [libIds[18]]));
     const count = await as(u, (q) => q('select count(*)::int as n from collection_items where collection_id = $1', [shelf.id]));
-    assert.equal(count[0].n, 11);
+    assert.equal(count[0].n, 17);
   });
 
   test('save_shelf_layout stores a note per placement, trims blanks, and limits length', async () => {

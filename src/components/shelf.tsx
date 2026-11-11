@@ -4,19 +4,20 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import type { ProductCategory } from '@/domain/library';
+import { bottleWidth, packLedges } from '@/domain/shelf';
 import { colors, fonts, space, type } from '@/theme/tokens';
 
 type Shape = { w: number; h: number; r: [number, number, number, number]; capW: number; capH: number; capR: number };
 
 /** Container proportions per category (from the Apothecary mockups): lipstick, dropper, flacon, tube, tub, brush, box. */
 const SHAPES: Record<ProductCategory, Shape> = {
-  makeup: { w: 20, h: 54, r: [2, 2, 2, 2], capW: 20, capH: 22, capR: 3 },
-  skincare: { w: 40, h: 64, r: [8, 8, 6, 6], capW: 12, capH: 22, capR: 3 },
-  fragrance: { w: 52, h: 62, r: [10, 10, 10, 10], capW: 26, capH: 20, capR: 3 },
-  haircare: { w: 34, h: 70, r: [14, 14, 6, 6], capW: 16, capH: 14, capR: 3 },
-  body: { w: 62, h: 30, r: [6, 6, 6, 6], capW: 62, capH: 12, capR: 3 },
-  tools: { w: 14, h: 72, r: [7, 7, 3, 3], capW: 22, capH: 24, capR: 11 },
-  other: { w: 38, h: 56, r: [4, 4, 4, 4], capW: 24, capH: 12, capR: 3 },
+  makeup: { w: bottleWidth.makeup, h: 54, r: [2, 2, 2, 2], capW: 20, capH: 22, capR: 3 },
+  skincare: { w: bottleWidth.skincare, h: 64, r: [8, 8, 6, 6], capW: 12, capH: 22, capR: 3 },
+  fragrance: { w: bottleWidth.fragrance, h: 62, r: [10, 10, 10, 10], capW: 26, capH: 20, capR: 3 },
+  haircare: { w: bottleWidth.haircare, h: 70, r: [14, 14, 6, 6], capW: 16, capH: 14, capR: 3 },
+  body: { w: bottleWidth.body, h: 30, r: [6, 6, 6, 6], capW: 62, capH: 12, capR: 3 },
+  tools: { w: bottleWidth.tools, h: 72, r: [7, 7, 3, 3], capW: 22, capH: 24, capR: 11 },
+  other: { w: bottleWidth.other, h: 56, r: [4, 4, 4, 4], capW: 24, capH: 12, capR: 3 },
 };
 
 /**
@@ -130,17 +131,9 @@ export type ShelfProduct = {
   onPress?: () => void;
 };
 
-/** Up to this many products stand on one ledge. */
-export const PER_LEDGE = 4;
-
-/** Fills ledges of four, balancing the last two so a ledge never holds a lone product unless it must. */
-export function ledgesOf<T>(items: readonly T[]): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += PER_LEDGE) out.push(items.slice(i, i + PER_LEDGE));
-  const last = out[out.length - 1];
-  const prev = out[out.length - 2];
-  if (last && prev && last.length === 1) last.unshift(prev.pop() as T);
-  return out;
+/** Fills ledges by how much room each product takes (domain/shelf.ts): small makeup packs tighter than bottles. */
+export function ledgesOf<T extends { category: ProductCategory }>(items: readonly T[]): T[][] {
+  return packLedges(items);
 }
 
 /**
@@ -151,8 +144,11 @@ export function ShelfLedge({ products }: { products: readonly ShelfProduct[] }) 
   const [width, setWidth] = useState(0);
   const n = Math.max(products.length, 1);
   const hasNotes = products.some((p) => p.note);
-  const photoHeight = n >= 4 ? 112 : n === 3 ? 132 : 146;
   const column = width / n;
+  // Photos stand as tall as their column allows (a photo is about 0.7 as wide as it is tall),
+  // so six on a ledge shrink to fit; before layout, a guess by count.
+  const byCount = n >= 6 ? 78 : n === 5 ? 92 : n === 4 ? 112 : n === 3 ? 132 : 146;
+  const photoHeight = width > 0 ? Math.min(146, Math.floor((column - 6) / 0.7)) : byCount;
   const noteWidth = Math.min(column + 28, 150);
 
   return (

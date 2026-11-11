@@ -1,11 +1,12 @@
 # Changelog
 
-## Unreleased — Home v2, phase 1: Want · Have · Used up (11 Nov 2026)
+## Unreleased — Home v2: Want · Have · Used up, one shelf (11 Nov 2026)
 
 ### Changed
 - Statuses read **Want, Have, Used up** everywhere (labels only; the database keeps `wishlist / owned / finished`). They are listed in life order: want it, have it, used it up.
 - Profile shows three tabs, Want · Have · Used up, opening on Have. "All" is gone from Profile.
 - The product page sets status with one segmented control instead of chips. "Finished on" reads "Used up on".
+- **Home v2, phase 2**: one shelf of up to 18 products (was 12), packed onto ledges by product size, so makeup fits about six to a ledge and bottles about four. No shelf switcher on Home. Below the shelf: your recent activity (last five things you did) and three count boxes linking to Want, Have and Used up. The shelf editor adds from Have only. (D23)
 
 ## 0.8.0 — Send to the catalogue, admin console (2 Nov 2026)
 

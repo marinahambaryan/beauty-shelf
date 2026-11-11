@@ -6,6 +6,7 @@ import { pickShelf, useCurrentShelfId } from '@/lib/current-shelf';
 import { requireSupabase } from '@/lib/supabase';
 import { supabaseCatalog } from './catalog';
 import { listCollections } from './collections';
+import { listRecentEvents } from './events';
 import { libraryCounts, listLibrary } from './library';
 import { getProfile } from './profile';
 import { getSubmission } from './submissions';
@@ -14,6 +15,8 @@ import { getSubmission } from './submissions';
 export const keys = {
   library: ['library'] as const,
   libraryCounts: ['library', 'counts'] as const,
+  /** Under 'library' so every library write refreshes it too. */
+  recentEvents: ['library', 'events'] as const,
   collections: ['collections'] as const,
   profile: ['profile'] as const,
   catalogSearch: (query: string, category: ProductCategory | null) => ['catalog', 'search', query, category] as const,
@@ -24,6 +27,8 @@ export const keys = {
 export const useLibrary = () => useQuery({ queryKey: keys.library, queryFn: () => listLibrary(requireSupabase()) });
 export const useLibraryCounts = () =>
   useQuery({ queryKey: keys.libraryCounts, queryFn: () => libraryCounts(requireSupabase()) });
+export const useRecentEvents = () =>
+  useQuery({ queryKey: keys.recentEvents, queryFn: () => listRecentEvents(requireSupabase(), 5) });
 export const useCollections = () =>
   useQuery({ queryKey: keys.collections, queryFn: () => listCollections(requireSupabase()) });
 export const useProfile = () => useQuery({ queryKey: keys.profile, queryFn: () => getProfile(requireSupabase()) });

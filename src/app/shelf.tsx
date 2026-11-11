@@ -23,7 +23,6 @@ import { SHELF_CAPACITY, type CollectionSummary, type ShelfPlacement } from '@/d
 import type { LibraryEntry } from '@/data/library';
 import { useDeleteCollection, useSaveShelf } from '@/data/mutations';
 import { useLibrary, useShelf, useShelves } from '@/data/queries';
-import { ownershipLabel } from '@/domain/library';
 import { collectionNameSchema } from '@/domain/validation';
 import { setCurrentShelf } from '@/lib/current-shelf';
 import { toAppError } from '@/lib/errors';
@@ -140,10 +139,8 @@ function Editor({
   const dirty = JSON.stringify(cleaned) !== JSON.stringify(initial ?? []) || name.trim() !== (shelf?.name ?? '');
   const full = placements.length >= SHELF_CAPACITY;
   const placedIds = new Set(placements.map((p) => p.libraryItemId));
-  // Owned products first: they are what actually stands on a shelf.
-  const rest = library
-    .filter((e) => !placedIds.has(e.id))
-    .sort((a, b) => Number(b.ownershipStatus === 'owned') - Number(a.ownershipStatus === 'owned'));
+  // The shelf is what you use now, so you add from Have.
+  const rest = library.filter((e) => !placedIds.has(e.id) && e.ownershipStatus === 'owned');
 
   const move = (from: number, to: number) =>
     setPlacements((ps) => {
@@ -234,7 +231,7 @@ function Editor({
           ))}
         </View>
       ) : (
-        <EmptyState title="Nothing on the shelf" body="Add products from your library below." />
+        <EmptyState title="Nothing on the shelf" body="Add the products you use every day from Have, below." />
       )}
 
       {save.isError ? <Notice>{toAppError(save.error).message}</Notice> : null}
@@ -296,7 +293,10 @@ function Editor({
       </Section>
 
       {rest.length ? (
-        <Section label="From your library" footer={full ? 'Your shelf holds 12 products. Adding one more swaps it for one already there.' : undefined}>
+        <Section
+          label="Add from Have"
+          footer={full ? `Your shelf holds ${SHELF_CAPACITY} products. Adding one more swaps it for one already there.` : undefined}
+        >
           <View>
             {rest.map((e) => (
               <View key={e.id} style={styles.placed}>
@@ -306,7 +306,7 @@ function Editor({
                     {e.name}
                   </AppText>
                   <AppText variant="small" numberOfLines={1}>
-                    {[e.brand, ownershipLabel[e.ownershipStatus]].filter(Boolean).join(' · ')}
+                    {e.brand}
                   </AppText>
                 </View>
                 <IconButton

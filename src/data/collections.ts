@@ -189,8 +189,8 @@ export async function markPurchased(db: Supabase, input: { itemId: string; remov
 // ---------------------------------------------------------------------------
 export type ShelfPlacement = { libraryItemId: string; note: string | null };
 
-/** A shelf holds up to 12 products (`shelf_capacity()` in the database). */
-export const SHELF_CAPACITY = 12;
+/** A shelf holds up to 18 products (`shelf_capacity()` in the database). */
+export const SHELF_CAPACITY = 18;
 
 /**
  * Saves the whole shelf — which products, their order and the note on each — in one
