@@ -28,23 +28,28 @@ import { useDeleteItem, useUpdateItem } from '@/data/mutations';
 import { useLibraryItem } from '@/data/queries';
 import {
   categoryLabel,
+  dateLabel,
+  daysUntil,
+  expiresOn,
   itemPatch,
+  LASTS_MONTHS,
   OWNERSHIP_STATUSES,
   ownershipLabel,
   REPURCHASE_INTENTS,
   repurchaseLabel,
+  timeLeftLabel,
   todayISO,
   USAGE_STATUSES,
   usageLabel,
   type ItemDraft,
 } from '@/domain/library';
-import { finishedDateSchema, noteSchema } from '@/domain/validation';
+import { finishedDateSchema, noteSchema, openedDateSchema } from '@/domain/validation';
 import { toAppError } from '@/lib/errors';
 import { goBack } from '@/lib/navigation';
 import { colors, fonts, radius, space } from '@/theme/tokens';
 
 /** The editor keeps text fields as typed; they are validated on save. */
-type Form = Omit<ItemDraft, 'finishedAt' | 'notes'> & { finishedAt: string; notes: string };
+type Form = Omit<ItemDraft, 'finishedAt' | 'openedOn' | 'notes'> & { finishedAt: string; openedOn: string; notes: string };
 
 const toForm = (e: LibraryEntry): Form => ({
   ownershipStatus: e.ownershipStatus,
@@ -52,9 +57,11 @@ const toForm = (e: LibraryEntry): Form => ({
   rating: e.rating,
   repurchaseIntent: e.repurchaseIntent,
   finishedAt: e.finishedAt ?? '',
+  openedOn: e.openedOn ?? '',
+  lastsMonths: e.lastsMonths,
   notes: e.notes ?? '',
 });
-const savedDraft = (e: LibraryEntry): ItemDraft => ({ ...toForm(e), finishedAt: e.finishedAt, notes: e.notes });
+const savedDraft = (e: LibraryEntry): ItemDraft => ({ ...toForm(e), finishedAt: e.finishedAt, openedOn: e.openedOn, notes: e.notes });
 
 export default function ItemScreen() {
   const params = useLocalSearchParams<{ id: string; added?: string; existing?: string }>();
@@ -116,7 +123,7 @@ function Editor({
   onReload: () => void;
 }) {
   const [form, setForm] = useState<Form>(() => toForm(entry));
-  const [errors, setErrors] = useState<{ notes?: string; finishedAt?: string }>({});
+  const [errors, setErrors] = useState<{ notes?: string; finishedAt?: string; openedOn?: string }>({});
   const [confirmInline, setConfirmInline] = useState(false);
   const update = useUpdateItem();
   const remove = useDeleteItem();
@@ -126,22 +133,27 @@ function Editor({
   // Parse what's typed; invalid text counts as a change so Save stays visible to show the error.
   const notes = noteSchema.safeParse(form.notes);
   const finished = finishedDateSchema.safeParse(form.finishedAt);
+  const opened = openedDateSchema.safeParse(form.openedOn);
   const draft: ItemDraft = {
     ...form,
     notes: notes.success ? notes.data : entry.notes,
     finishedAt: finished.success ? finished.data : entry.finishedAt,
+    openedOn: opened.success ? opened.data : entry.openedOn,
   };
   const patch = itemPatch(savedDraft(entry), draft);
-  const dirty = Object.keys(patch).length > 0 || !notes.success || !finished.success;
+  const dirty = Object.keys(patch).length > 0 || !notes.success || !finished.success || !opened.success;
+  const bestBefore = expiresOn(draft.openedOn, draft.lastsMonths);
+  const left = bestBefore ? daysUntil(bestBefore) : null;
   const leavingOwned = entry.ownershipStatus === 'owned' && form.ownershipStatus !== 'owned' && entry.usageStatus;
 
   const save = () => {
     const nextErrors = {
       notes: notes.success ? undefined : notes.error.issues[0]?.message,
       finishedAt: finished.success ? undefined : finished.error.issues[0]?.message,
+      openedOn: opened.success ? undefined : opened.error.issues[0]?.message,
     };
     setErrors(nextErrors);
-    if (nextErrors.notes || nextErrors.finishedAt) return;
+    if (nextErrors.notes || nextErrors.finishedAt || nextErrors.openedOn) return;
     update.mutate({ id: entry.id, version: entry.version, patch }, { onSuccess: onSaved });
   };
 
@@ -240,6 +252,38 @@ function Editor({
             ) : null
           }
         />
+      ) : null}
+
+      {form.ownershipStatus !== 'wishlist' ? (
+        <Section label="Opened">
+          <TextField
+            label="Opened on"
+            placeholder="YYYY-MM-DD"
+            value={form.openedOn}
+            onChangeText={(v) => set('openedOn', v)}
+            error={errors.openedOn}
+            keyboardType="numbers-and-punctuation"
+            autoCorrect={false}
+            maxLength={10}
+            trailing={
+              form.openedOn !== todayISO() ? <TextAction label="Today" onPress={() => set('openedOn', todayISO())} /> : null
+            }
+          />
+          <AppText variant="label">Lasts after opening</AppText>
+          <Chips
+            options={LASTS_MONTHS.map((m) => ({ value: String(m), label: `${m} months` }))}
+            value={form.lastsMonths ? String(form.lastsMonths) : null}
+            onChange={(m) => set('lastsMonths', Number(m))}
+            onClear={() => set('lastsMonths', null)}
+            accessibilityLabel="Lasts after opening"
+            scroll
+          />
+          <AppText variant="bodySoft">
+            {bestBefore && left !== null
+              ? `Best before ${dateLabel(bestBefore)} · ${timeLeftLabel(left)}`
+              : 'The open-jar symbol on the packaging says how many months it lasts. Add both to get a reminder on Home.'}
+          </AppText>
+        </Section>
       ) : null}
 
       <Section label="Rating">

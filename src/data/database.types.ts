@@ -172,7 +172,9 @@ export type Database = {
           created_at: string;
           finished_at: string | null;
           id: string;
+          lasts_months: number | null;
           notes: string | null;
+          opened_on: string | null;
           ownership_status: Database["public"]["Enums"]["ownership_status"];
           personal_product_id: string | null;
           photo_path: string | null;
@@ -190,7 +192,9 @@ export type Database = {
           created_at?: string;
           finished_at?: string | null;
           id?: string;
+          lasts_months?: number | null;
           notes?: string | null;
+          opened_on?: string | null;
           ownership_status: Database["public"]["Enums"]["ownership_status"];
           personal_product_id?: string | null;
           photo_path?: string | null;
@@ -207,7 +211,9 @@ export type Database = {
           created_at?: string;
           finished_at?: string | null;
           id?: string;
+          lasts_months?: number | null;
           notes?: string | null;
+          opened_on?: string | null;
           ownership_status?: Database["public"]["Enums"]["ownership_status"];
           personal_product_id?: string | null;
           photo_path?: string | null;
@@ -562,7 +568,12 @@ export type Database = {
         | "tools"
         | "other";
       product_event_type:
-        "added" | "status_changed" | "finished" | "repurchased" | "purchased";
+        | "added"
+        | "status_changed"
+        | "finished"
+        | "repurchased"
+        | "purchased"
+        | "opened";
       repurchase_intent: "yes" | "no" | "unsure";
       usage_status: "unopened" | "using" | "paused";
     };
@@ -712,6 +723,7 @@ export const Constants = {
         "finished",
         "repurchased",
         "purchased",
+        "opened",
       ],
       repurchase_intent: ["yes", "no", "unsure"],
       usage_status: ["unopened", "using", "paused"],

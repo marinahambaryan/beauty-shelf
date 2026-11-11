@@ -34,13 +34,15 @@ export type LibraryEntry = {
   notes: string | null;
   repurchaseIntent: RepurchaseIntent | null;
   finishedAt: string | null;
+  openedOn: string | null;
+  lastsMonths: number | null;
   updatedAt: string;
   version: number;
 };
 
 const LIBRARY_SELECT = `
   id, catalog_variant_id, personal_product_id, photo_path, ownership_status, usage_status, rating, notes, repurchase_intent,
-  finished_at, updated_at, version,
+  finished_at, opened_on, lasts_months, updated_at, version,
   product_variants(label, image_url, product_id, products(name, category, image_url, brands(name))),
   personal_products(brand_name, name, category, variant_label, image_path)
 ` as const;
@@ -62,6 +64,8 @@ export async function listLibrary(db: Supabase): Promise<LibraryEntry[]> {
       notes: row.notes,
       repurchaseIntent: row.repurchase_intent,
       finishedAt: row.finished_at,
+      openedOn: row.opened_on,
+      lastsMonths: row.lasts_months,
       updatedAt: row.updated_at,
       version: row.version,
     };

@@ -26,6 +26,8 @@ export function describeEvent(e: Pick<ProductEvent, 'type' | 'from' | 'to'>, nam
       return `Bought ${name} again`;
     case 'purchased':
       return `Bought ${name}`;
+    case 'opened':
+      return `Opened ${name}`;
     case 'status_changed':
       return `Moved ${name} from ${place(e.from)} to ${place(e.to)}`;
   }

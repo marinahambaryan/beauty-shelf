@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { todayISO } from '@/domain/library';
+
 export const emailSchema = z.string().trim().toLowerCase().pipe(z.email('Enter a valid email address.'));
 
 export const signInSchema = z.object({
@@ -61,6 +63,14 @@ export const finishedDateSchema = z
   .string()
   .trim()
   .refine((v) => v === '' || (/^\d{4}-\d{2}-\d{2}$/.test(v) && isRealDate(v)), 'Use a date like 2026-10-28.')
+  .transform((v) => (v.length ? v : null));
+
+/** Opening date as typed: blank, or a real date written YYYY-MM-DD that isn't in the future. */
+export const openedDateSchema = z
+  .string()
+  .trim()
+  .refine((v) => v === '' || (/^\d{4}-\d{2}-\d{2}$/.test(v) && isRealDate(v)), 'Use a date like 2026-10-28.')
+  .refine((v) => v === '' || v <= todayISO(), 'That date hasn’t happened yet.')
   .transform((v) => (v.length ? v : null));
 
 export const collectionNameSchema = z

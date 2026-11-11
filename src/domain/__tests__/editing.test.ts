@@ -7,6 +7,8 @@ const saved: ItemDraft = {
   rating: 4,
   repurchaseIntent: null,
   finishedAt: null,
+  openedOn: null,
+  lastsMonths: null,
   notes: 'Lovely',
 };
 

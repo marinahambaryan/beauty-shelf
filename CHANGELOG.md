@@ -7,6 +7,7 @@
 - Profile shows three tabs, Want · Have · Used up, opening on Have. "All" is gone from Profile.
 - The product page sets status with one segmented control instead of chips. "Finished on" reads "Used up on".
 - **Home v2, phase 2**: one shelf of up to 18 products (was 12), packed onto ledges by product size, so makeup fits about six to a ledge and bottles about four. No shelf switcher on Home. Below the shelf: your recent activity (last five things you did) and three count boxes linking to Want, Have and Used up. The shelf editor adds from Have only. (D23)
+- **Home v2, phase 3**: products in Have or Used up can carry the date you opened them and how long they last after opening (3–24 months). The product page shows "Best before … · 3 weeks left". Home gains a **Needs you** strip, at most three cards: something expiring (Mark used up), something used up you'd buy again (Add to Want), something in use or just bought without an opening date (Opened today). Later / Skip hides a card on this device until its situation changes. Opening something shows in recent activity. (D24)
 
 ## 0.8.0 — Send to the catalogue, admin console (2 Nov 2026)
 

@@ -125,6 +125,10 @@ export type ItemDraft = {
   repurchaseIntent: RepurchaseIntent | null;
   /** Already validated: YYYY-MM-DD or null. */
   finishedAt: string | null;
+  /** When it was opened, YYYY-MM-DD or null. */
+  openedOn: string | null;
+  /** How long it lasts after opening (the open-jar symbol), in months. */
+  lastsMonths: number | null;
   notes: string | null;
 };
 
@@ -134,6 +138,8 @@ export type ItemPatch = Partial<{
   rating: number | null;
   repurchase_intent: RepurchaseIntent | null;
   finished_at: string | null;
+  opened_on: string | null;
+  lasts_months: number | null;
   notes: string | null;
 }>;
 
@@ -151,6 +157,8 @@ export function itemPatch(saved: ItemDraft, draft: ItemDraft): ItemPatch {
   if (draft.rating !== saved.rating) patch.rating = draft.rating;
   if (draft.repurchaseIntent !== saved.repurchaseIntent) patch.repurchase_intent = draft.repurchaseIntent;
   if (draft.ownershipStatus === 'finished' && draft.finishedAt !== saved.finishedAt) patch.finished_at = draft.finishedAt;
+  if (draft.openedOn !== saved.openedOn) patch.opened_on = draft.openedOn;
+  if (draft.lastsMonths !== saved.lastsMonths) patch.lasts_months = draft.lastsMonths;
   if ((draft.notes ?? null) !== (saved.notes ?? null)) patch.notes = draft.notes;
   return patch;
 }
@@ -164,4 +172,48 @@ export function variantKind(variants: readonly { shadeName: string | null; sizeL
 export function todayISO(now = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+/** The periods printed in the open-jar symbol on packaging, in months. */
+export const LASTS_MONTHS = [3, 6, 12, 18, 24] as const;
+
+const isoOf = (y: number, m: number, d: number) =>
+  `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+/**
+ * Best before: the opening date plus the months it lasts, as YYYY-MM-DD. A day that
+ * doesn't exist in the target month falls back to that month's last day (31 Aug + 6 → 28 Feb).
+ */
+export function expiresOn(openedOn: string | null, lastsMonths: number | null): string | null {
+  if (!openedOn || !lastsMonths) return null;
+  const [y, m, d] = openedOn.split('-').map(Number) as [number, number, number];
+  const total = m - 1 + lastsMonths;
+  const ty = y + Math.floor(total / 12);
+  const tm = total % 12;
+  const last = new Date(Date.UTC(ty, tm + 1, 0)).getUTCDate();
+  return isoOf(ty, tm, Math.min(d, last));
+}
+
+/** Whole days from today until a YYYY-MM-DD date; negative once it has passed. */
+export function daysUntil(date: string, now = new Date()): number {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+  const target = Date.UTC(y, m - 1, d);
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((target - today) / 86_400_000);
+}
+
+/** "3 weeks left", "5 days left", "expired 2 days ago" — for a best-before date. */
+export function timeLeftLabel(days: number): string {
+  if (days < 0) return days === -1 ? 'expired yesterday' : `expired ${-days} days ago`;
+  if (days === 0) return 'expires today';
+  if (days === 1) return '1 day left';
+  if (days < 14) return `${days} days left`;
+  if (days < 60) return `${Math.round(days / 7)} weeks left`;
+  return `${Math.round(days / 30)} months left`;
+}
+
+/** A YYYY-MM-DD date as people read it: "2 Dec 2026". */
+export function dateLabel(date: string): string {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }

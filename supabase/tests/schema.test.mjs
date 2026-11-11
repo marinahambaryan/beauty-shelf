@@ -531,3 +531,38 @@ describe('collections: looks, rename, delete, membership', () => {
   });
 });
 
+
+describe('opening date and how long it lasts', () => {
+  test('the owner sets both; opening is logged once, and other people see nothing', async () => {
+    const u = await createUser('opener');
+    const item = await as(u, (q) => addVariant(q, LIP_ROSEWOOD));
+    const id = item.library_item_id;
+
+    await as(u, (q) => q("update library_items set lasts_months = 12 where id = $1", [id]));
+    await as(u, (q) => q("update library_items set opened_on = '2026-11-01' where id = $1", [id]));
+    await as(u, (q) => q("update library_items set opened_on = '2026-11-02' where id = $1", [id]));
+    const [row] = await as(u, (q) => q('select opened_on, lasts_months from library_items where id = $1', [id]));
+    assert.equal(row.lasts_months, 12);
+    assert.ok(row.opened_on);
+
+    const events = await as(u, (q) =>
+      q("select event_type from product_events where library_item_id = $1 and event_type = 'opened'", [id]));
+    assert.equal(events.length, 1, 'changing the date later does not log another opening');
+
+    await expectDenied(u, (q) => q('update library_items set lasts_months = 0 where id = $1', [id]), /check constraint/);
+    await expectDenied(u, (q) => q('update library_items set lasts_months = 61 where id = $1', [id]), /check constraint/);
+
+    const theirs = await as(bob, (q) => q('select opened_on from library_items where id = $1', [id]));
+    assert.equal(theirs.length, 0, 'opening dates are private like the rest of the library');
+  });
+
+  test('changing status and opening in one save logs both', async () => {
+    const u = await createUser('opener2');
+    const item = await as(u, (q) => addVariant(q, LIP_CINEMA_RED, 'wishlist'));
+    await as(u, (q) =>
+      q("update library_items set ownership_status = 'owned', opened_on = '2026-11-10' where id = $1", [item.library_item_id]));
+    const events = await as(u, (q) =>
+      q('select event_type from product_events where library_item_id = $1', [item.library_item_id]));
+    assert.deepEqual(events.map((e) => e.event_type).sort(), ['added', 'opened', 'status_changed']);
+  });
+});

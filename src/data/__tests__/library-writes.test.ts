@@ -78,6 +78,8 @@ const entry = (over: Partial<LibraryEntry> = {}): LibraryEntry => ({
   notes: null,
   repurchaseIntent: null,
   finishedAt: null,
+  openedOn: null,
+  lastsMonths: null,
   updatedAt: '2026-10-28T10:00:00Z',
   version: 1,
   ...over,

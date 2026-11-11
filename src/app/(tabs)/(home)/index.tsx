@@ -2,13 +2,16 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AttentionStrip } from '@/components/attention-strip';
 import { openItem } from '@/components/ProductRow';
 import { ledgesOf, ShelfLedge, type ShelfProduct } from '@/components/shelf';
 import { AppText, Button, ErrorState, IconButton, LoadingState, Screen } from '@/components/ui';
 import type { LibraryEntry } from '@/data/library';
 import { useLibrary, useRecentEvents, useShelf } from '@/data/queries';
+import { attentionCards } from '@/domain/attention';
 import { describeEvent, whenLabel } from '@/domain/events';
 import { OWNERSHIP_STATUSES, ownershipLabel, type OwnershipStatus } from '@/domain/library';
+import { useDismissedCards } from '@/lib/dismissed-cards';
 import { toAppError } from '@/lib/errors';
 import { colors, fonts, radius, space } from '@/theme/tokens';
 
@@ -18,15 +21,17 @@ const FALLBACK_COUNT = 6;
 const describeEntry = (e: LibraryEntry) => [e.brand, e.name, e.variant].filter(Boolean).join(', ');
 
 /**
- * Home: your shelf — the products you use now, every category on one shelf — then
- * your recent activity and how many products you want, have and have used up.
+ * Home: what needs you (expiring, buy again, opened?), then your shelf — the products
+ * you use now, every category on one shelf — then your recent activity and how many products you want, have and have used up.
  * Only your own data; a feed of other people waits until there are followers.
  */
 export default function HomeScreen() {
   const library = useLibrary();
   const shelf = useShelf();
   const events = useRecentEvents();
+  const dismissed = useDismissedCards();
   const data = useMemo(() => library.data ?? [], [library.data]);
+  const cards = useMemo(() => attentionCards(data, events.data ?? [], dismissed), [data, events.data, dismissed]);
 
   const counts = useMemo(() => {
     const c: Record<OwnershipStatus, number> = { owned: 0, wishlist: 0, finished: 0 };
@@ -90,6 +95,7 @@ export default function HomeScreen() {
         </View>
       ) : (
         <>
+          <AttentionStrip cards={cards} onStale={() => void library.refetch()} />
           <View style={styles.shelves} accessibilityLabel={arranged ? 'Your shelf' : 'Using now'}>
             {ledges.map((ledge, i) => (
               <ShelfLedge key={i} products={ledge} />
