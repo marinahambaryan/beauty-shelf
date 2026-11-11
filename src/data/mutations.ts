@@ -29,6 +29,7 @@ import {
 } from './collections';
 import { removePhotos } from './photos';
 import { keys } from './queries';
+import { sendToCatalogue } from './submissions';
 
 /** Anything that changes the library refreshes the lists, counts and shelf that show it. */
 function useRefreshLibrary() {
@@ -211,5 +212,13 @@ export function useMarkPurchased() {
   return useMutation({
     mutationFn: (input: { itemId: string; remove: boolean }) => markPurchased(requireSupabase(), input),
     onSettled: () => refresh(),
+  });
+}
+
+export function useSendToCatalogue(personalProductId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ note }: { note: string | null }) => sendToCatalogue(requireSupabase(), { personalProductId, note }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.submission(personalProductId) }),
   });
 }

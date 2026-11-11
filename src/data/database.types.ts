@@ -31,6 +31,29 @@ export type Database = {
         };
         Relationships: [];
       };
+      catalog_submissions: {
+        Row: {
+          brand_name: string;
+          category: Database["public"]["Enums"]["product_category"];
+          created_at: string;
+          id: string;
+          image_path: string | null;
+          name: string;
+          note: string | null;
+          personal_product_id: string;
+          product_id: string | null;
+          review_note: string | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database["public"]["Enums"]["submission_status"];
+          user_id: string;
+          variant_id: string | null;
+          variant_label: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       collection_items: {
         Row: {
           catalog_variant_id: string | null;
@@ -510,6 +533,10 @@ export type Database = {
           variant_count: number;
         }[];
       };
+      submit_personal_product: {
+        Args: { p_note?: string; p_personal_product_id: string };
+        Returns: string;
+      };
       set_collection_order: {
         Args: {
           p_collection_id: string;
@@ -525,6 +552,7 @@ export type Database = {
       collection_look: "board" | "mini_shelf" | "pouch" | "basket";
       collection_type: "custom" | "shopping" | "shelf";
       ownership_status: "owned" | "wishlist" | "finished";
+      submission_status: "pending" | "approved" | "rejected";
       product_category:
         | "makeup"
         | "skincare"
@@ -668,6 +696,7 @@ export const Constants = {
       collection_look: ["board", "mini_shelf", "pouch", "basket"],
       collection_type: ["custom", "shopping", "shelf"],
       ownership_status: ["owned", "wishlist", "finished"],
+      submission_status: ["pending", "approved", "rejected"],
       product_category: [
         "makeup",
         "skincare",

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0 — Send to the catalogue, admin console (2 Nov 2026)
+
+### Added
+- **Send to catalogue**: a product added manually can be sent for review from its page, with an optional note. The page says what is shared first, and shows when it's waiting, added or not added, with the reason. Notes, ratings and everything else in the library stay private.
+- Admin console support (D22): migration for admins, submissions and the activity log, the `admin-users` Edge Function, and 30 database tests. The console itself is the separate `beauty-shelf-admin` project.
+
 ## 0.7.0 — Hosted project, builds, CI (31 Oct 2026)
 - Hosted Supabase project `beauty-shelf` (Frankfurt) with all migrations, the catalogue and the delete-account function (D21).
 - `eas.json` build profiles pointing at it; iOS export-compliance flag in `app.json`.

@@ -8,6 +8,7 @@ import { supabaseCatalog } from './catalog';
 import { listCollections } from './collections';
 import { libraryCounts, listLibrary } from './library';
 import { getProfile } from './profile';
+import { getSubmission } from './submissions';
 
 /** Central query keys so mutations can invalidate precisely. */
 export const keys = {
@@ -17,6 +18,7 @@ export const keys = {
   profile: ['profile'] as const,
   catalogSearch: (query: string, category: ProductCategory | null) => ['catalog', 'search', query, category] as const,
   catalogProduct: (id: string) => ['catalog', 'product', id] as const,
+  submission: (personalProductId: string) => ['submission', personalProductId] as const,
 };
 
 export const useLibrary = () => useQuery({ queryKey: keys.library, queryFn: () => listLibrary(requireSupabase()) });
@@ -45,6 +47,13 @@ export function useLibraryItem(id: string | undefined) {
   const entry = id ? library.data?.find((e) => e.id === id) : undefined;
   return { ...library, entry };
 }
+
+/** The latest time a product added manually was sent to the catalogue. */
+export const useSubmission = (personalProductId: string) =>
+  useQuery({
+    queryKey: keys.submission(personalProductId),
+    queryFn: () => getSubmission(requireSupabase(), personalProductId),
+  });
 
 /** Catalogue search. Keeps the previous results on screen while the next query loads. */
 export const useCatalogSearch = (query: string, category: ProductCategory | null) =>

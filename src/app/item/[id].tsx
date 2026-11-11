@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { RatingInput } from '@/components/rating';
+import { SendToCatalogue } from '@/components/send-to-catalogue';
 import { Bottle } from '@/components/shelf';
 import {
   AppText,
@@ -280,6 +281,8 @@ function Editor({
           />
         </View>
       ) : null}
+
+      {entry.personalProductId ? <SendToCatalogue personalProductId={entry.personalProductId} /> : null}
 
       <Section label="Product">
         <View>

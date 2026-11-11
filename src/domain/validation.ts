@@ -37,6 +37,7 @@ const optionalText = (max: number, message: string) =>
     .transform((v) => (v.length ? v : null));
 
 export const noteSchema = optionalText(5000, 'Keep notes under 5,000 characters.');
+export const submissionNoteSchema = optionalText(500, 'Keep this under 500 characters.');
 
 /** "Add manually": a product that isn't in the catalogue, private to this person. */
 export const personalProductSchema = z.object({
