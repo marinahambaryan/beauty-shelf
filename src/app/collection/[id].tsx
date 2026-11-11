@@ -341,7 +341,7 @@ function ShoppingList({ items }: { items: DisplayItem[] }) {
             ) : null}
             {confirming === it.key ? (
               <View style={styles.confirm} accessibilityRole="alert">
-                <AppText variant="body">{`${it.name} goes into your library as Owned.`}</AppText>
+                <AppText variant="body">{`${it.name} goes into Have.`}</AppText>
                 <Button
                   label="Add and take off the list"
                   loading={purchase.isPending && purchase.variables?.remove === true}

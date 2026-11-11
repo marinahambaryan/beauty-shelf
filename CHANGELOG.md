@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Home v2, phase 1: Want · Have · Used up (11 Nov 2026)
+
+### Changed
+- Statuses read **Want, Have, Used up** everywhere (labels only; the database keeps `wishlist / owned / finished`). They are listed in life order: want it, have it, used it up.
+- Profile shows three tabs, Want · Have · Used up, opening on Have. "All" is gone from Profile.
+- The product page sets status with one segmented control instead of chips. "Finished on" reads "Used up on".
+
 ## 0.8.0 — Send to the catalogue, admin console (2 Nov 2026)
 
 ### Added

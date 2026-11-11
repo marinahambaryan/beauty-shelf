@@ -7,7 +7,6 @@ import { ProductTile } from '@/components/ProductRow';
 import {
   AppText,
   Button,
-  Chips,
   EmptyState,
   ErrorState,
   IconButton,
@@ -19,7 +18,7 @@ import {
   UnderlineTabs,
 } from '@/components/ui';
 import { useCollections, useLibrary, useProfile } from '@/data/queries';
-import { LIBRARY_VIEWS, libraryViewLabel, matchesQuery, sortLibrary, type LibraryView } from '@/domain/library';
+import { LIBRARY_VIEWS, libraryViewLabel, OWNERSHIP_STATUSES, matchesQuery, sortLibrary, type LibraryView } from '@/domain/library';
 import { useAuth } from '@/lib/auth';
 import { toAppError } from '@/lib/errors';
 import { useSignOut } from '@/lib/use-sign-out';
@@ -41,7 +40,7 @@ export default function ProfileScreen() {
   const library = useLibrary();
   const collections = useCollections();
   const [tab, setTab] = useState<Tab>(params.tab === 'collections' ? 'collections' : 'products');
-  const [view, setView] = useState<LibraryView>(isView(params.view) ? params.view : 'all');
+  const [view, setView] = useState<LibraryView>(isView(params.view) ? params.view : 'owned');
   const [query, setQuery] = useState('');
 
   // Home's counts link here with ?view=owned etc.; follow it whenever it changes.
@@ -129,12 +128,10 @@ export default function ProfileScreen() {
 
       {tab === 'products' ? (
         <>
-          <Chips
-            scroll
-            options={LIBRARY_VIEWS.map((v) => ({ value: v, label: libraryViewLabel[v] }))}
-            value={view}
+          <UnderlineTabs
+            options={OWNERSHIP_STATUSES.map((v) => ({ value: v, label: libraryViewLabel[v] }))}
+            value={view === 'all' ? 'owned' : view}
             onChange={setView}
-            accessibilityLabel="Show"
           />
           {library.isPending ? (
             <LoadingState label="Loading your products" />

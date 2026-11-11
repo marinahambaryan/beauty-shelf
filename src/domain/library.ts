@@ -6,16 +6,17 @@ export type UsageStatus = Enums['usage_status'];
 export type RepurchaseIntent = Enums['repurchase_intent'];
 export type ProductCategory = Enums['product_category'];
 
-export const OWNERSHIP_STATUSES: readonly OwnershipStatus[] = ['owned', 'wishlist', 'finished'];
+/** In the order a product lives through them: want it, have it, used it up. */
+export const OWNERSHIP_STATUSES: readonly OwnershipStatus[] = ['wishlist', 'owned', 'finished'];
 export const USAGE_STATUSES: readonly UsageStatus[] = ['unopened', 'using', 'paused'];
 export const CATEGORIES: readonly ProductCategory[] = [
   'makeup', 'skincare', 'fragrance', 'haircare', 'body', 'tools', 'other',
 ];
 
 export const ownershipLabel: Record<OwnershipStatus, string> = {
-  owned: 'Owned',
-  wishlist: 'Wishlist',
-  finished: 'Finished',
+  wishlist: 'Want',
+  owned: 'Have',
+  finished: 'Used up',
 };
 export const usageLabel: Record<UsageStatus, string> = {
   unopened: 'Unopened',
@@ -34,7 +35,7 @@ export const categoryLabel: Record<ProductCategory, string> = {
 
 /** Library system views. "all" is not a status — it is the union. */
 export type LibraryView = 'all' | OwnershipStatus;
-export const LIBRARY_VIEWS: readonly LibraryView[] = ['all', 'owned', 'wishlist', 'finished'];
+export const LIBRARY_VIEWS: readonly LibraryView[] = ['all', 'wishlist', 'owned', 'finished'];
 export const libraryViewLabel: Record<LibraryView, string> = { all: 'All', ...ownershipLabel };
 
 export type StatusPatch = {

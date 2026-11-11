@@ -220,7 +220,7 @@ function ResultTile({
           disabled={adding}
           accessibilityRole="button"
           accessibilityLabel={`Add ${result.name} to your library`}
-          accessibilityHint={result.defaultVariantId ? 'Adds it as Owned' : 'Choose a shade or size first'}
+          accessibilityHint={result.defaultVariantId ? 'Adds it to Have' : 'Choose a shade or size first'}
           hitSlop={6}
           style={({ pressed }) => [styles.tileAdd, { top: height - 50 }, pressed && styles.pressed]}
         >

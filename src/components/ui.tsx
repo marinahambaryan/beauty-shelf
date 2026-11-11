@@ -521,6 +521,41 @@ export function Chips<T extends string>({
   );
 }
 
+/** One choice of a few, as a single pill with the current one filled black: "Want | Have | Used up". */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  accessibilityLabel,
+}: {
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  accessibilityLabel?: string;
+}) {
+  return (
+    <View style={styles.segmented} accessibilityRole="radiogroup" accessibilityLabel={accessibilityLabel}>
+      {options.map((o) => {
+        const selected = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            onPress={() => onChange(o.value)}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: selected }}
+            accessibilityLabel={o.label}
+            style={({ pressed }) => [styles.segment, selected && styles.chipSelected, pressed && styles.pressed]}
+          >
+            <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]} numberOfLines={1}>
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 /** Centered word tabs with an underline under the current one: "Products   Collections". */
 export function UnderlineTabs<T extends string>({
   options,
@@ -661,6 +696,8 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: colors.ink },
   chipLabel: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
   chipLabelSelected: { color: colors.ground },
+  segmented: { flexDirection: 'row', padding: 4, borderRadius: 26, borderWidth: 1, borderColor: colors.chip },
+  segment: { flex: 1, minHeight: touchTarget, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   underlineTabs: { flexDirection: 'row', justifyContent: 'center', gap: space.xxl },
   underlineTab: { minHeight: touchTarget, justifyContent: 'center', borderBottomWidth: 3, borderColor: 'transparent' },
   underlineTabSelected: { borderColor: colors.ink },

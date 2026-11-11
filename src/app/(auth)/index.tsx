@@ -30,7 +30,7 @@ export default function SignInScreen() {
       <View style={styles.masthead}>
         <PageTitle>{'Beauty\nshelf'}</PageTitle>
         <AppText variant="bodySoft" style={styles.tagline}>
-          Keep track of what you own, what you want and what you’ve finished.
+          Keep track of what you own, what you want and what you’ve used up.
         </AppText>
       </View>
       {formError ? <Notice>{formError}</Notice> : null}

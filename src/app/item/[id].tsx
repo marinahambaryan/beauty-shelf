@@ -18,6 +18,7 @@ import {
   Row,
   Screen,
   Section,
+  Segmented,
   TextAction,
   TextField,
   TopBar,
@@ -195,7 +196,7 @@ function Editor({
       </View>
 
       <Section label="Status">
-        <Chips
+        <Segmented
           options={OWNERSHIP_STATUSES.map((s) => ({ value: s, label: ownershipLabel[s] }))}
           value={form.ownershipStatus}
           onChange={(s) => set('ownershipStatus', s)}
@@ -224,7 +225,7 @@ function Editor({
 
       {form.ownershipStatus === 'finished' ? (
         <TextField
-          label="Finished on"
+          label="Used up on"
           placeholder="YYYY-MM-DD"
           value={form.finishedAt}
           onChangeText={(v) => set('finishedAt', v)}
