@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { RatingInput } from '@/components/rating';
+import { FromEveryone, RatingLine, YourReview } from '@/components/reviews';
 import { SendToCatalogue } from '@/components/send-to-catalogue';
 import { Bottle } from '@/components/shelf';
 import {
@@ -196,6 +197,7 @@ function Editor({
               .filter(Boolean)
               .join(' · ')}
           </AppText>
+          {entry.productId ? <RatingLine productId={entry.productId} /> : null}
         </View>
         <Pressable
           onPress={() => router.push({ pathname: '/collection/pick', params: { entry: entry.id } })}
@@ -286,9 +288,12 @@ function Editor({
         </Section>
       ) : null}
 
-      <Section label="Rating">
-        <RatingInput value={form.rating} onChange={(r) => set('rating', r)} />
-      </Section>
+      {/* Catalogue products are rated for everyone below; ones added manually keep a private rating. */}
+      {!entry.productId ? (
+        <Section label="Your rating" right="Only you">
+          <RatingInput value={form.rating} onChange={(r) => set('rating', r)} />
+        </Section>
+      ) : null}
 
       <Section label="Would you buy it again?">
         <Chips
@@ -328,6 +333,14 @@ function Editor({
       ) : null}
 
       {entry.personalProductId ? <SendToCatalogue personalProductId={entry.personalProductId} /> : null}
+
+      {entry.productId ? (
+        <>
+          <YourReview productId={entry.productId} productName={entry.name} entryId={entry.id} privateRating={entry.rating} />
+          <View style={styles.divider} />
+          <FromEveryone productId={entry.productId} productName={entry.name} />
+        </>
+      ) : null}
 
       <Section label="Product">
         <View>
@@ -378,5 +391,6 @@ const styles = StyleSheet.create({
   },
   statusLabel: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ground },
   saveBar: { gap: space.xs },
+  divider: { height: 8, backgroundColor: colors.tile, marginHorizontal: -space.xl },
   confirm: { gap: space.md, padding: space.lg, borderRadius: radius.md, backgroundColor: colors.dangerWash },
 });

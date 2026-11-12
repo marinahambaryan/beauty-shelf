@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { FromEveryone, RatingLine } from '@/components/reviews';
 import { Bottle } from '@/components/shelf';
 import {
   AppText,
@@ -118,6 +119,7 @@ export default function AddProductScreen() {
       <View style={styles.title}>
         <AppText variant="heading">{p.name}</AppText>
         <AppText variant="bodySoft">{[p.brand, categoryLabel[p.category]].filter(Boolean).join(' · ')}</AppText>
+        <RatingLine productId={p.id} />
       </View>
 
       {!single ? (
@@ -185,6 +187,9 @@ export default function AddProductScreen() {
           <Button label="Add to library" onPress={submit} loading={add.isPending} />
         </>
       )}
+
+      {/* Deciding whether you want it: what other people think. */}
+      <FromEveryone productId={p.id} productName={p.name} />
     </Screen>
   );
 }

@@ -17,4 +17,13 @@ describe('toAppError', () => {
     expect(toAppError({ message: 'version_conflict' }).kind).toBe('conflict');
     expect(toAppError({ message: 'shelf_full' }).kind).toBe('shelf_full');
   });
+  test('review refusals say what to do', () => {
+    expect(toAppError({ message: 'display_name_required' }).message).toMatch(/name your reviews show/);
+    const twice = toAppError({
+      code: '23505',
+      message: 'duplicate key value violates unique constraint "product_reviews_one_per_person"',
+    });
+    expect(twice.kind).toBe('conflict');
+    expect(twice.message).toMatch(/already reviewed/);
+  });
 });

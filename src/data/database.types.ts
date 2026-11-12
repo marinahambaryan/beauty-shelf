@@ -335,6 +335,48 @@ export type Database = {
           },
         ];
       };
+      product_reviews: {
+        Row: {
+          body: string | null;
+          created_at: string;
+          id: string;
+          product_id: string;
+          rating: number;
+          updated_at: string;
+          user_id: string;
+          version: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          body?: string | null;
+          created_at?: string;
+          id?: string;
+          product_id: string;
+          rating: number;
+          updated_at?: string;
+          user_id?: string;
+          version?: number;
+        };
+        Update: {
+          body?: string | null;
+          created_at?: string;
+          id?: string;
+          product_id?: string;
+          rating?: number;
+          updated_at?: string;
+          user_id?: string;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       product_variants: {
         Row: {
           barcode: string | null;
@@ -512,6 +554,27 @@ export type Database = {
           p_library_item_ids: string[];
         };
         Returns: number;
+      };
+      product_rating_summary: {
+        Args: { p_product_id: string };
+        Returns: {
+          average: number | null;
+          histogram: number[];
+          ratings: number;
+          reviews: number;
+        }[];
+      };
+      product_reviews_page: {
+        Args: { p_limit?: number; p_offset?: number; p_product_id: string };
+        Returns: {
+          author_name: string;
+          body: string;
+          created_at: string;
+          id: string;
+          is_mine: boolean;
+          rating: number;
+          updated_at: string;
+        }[];
       };
       save_shelf_layout: {
         Args: {

@@ -7,6 +7,7 @@ import { requireSupabase } from '@/lib/supabase';
 import { supabaseCatalog } from './catalog';
 import { listCollections } from './collections';
 import { listRecentEvents } from './events';
+import { getMyReview, getRatingSummary, listReviews } from './reviews';
 import { libraryCounts, listLibrary } from './library';
 import { getProfile } from './profile';
 import { getSubmission } from './submissions';
@@ -22,6 +23,11 @@ export const keys = {
   catalogSearch: (query: string, category: ProductCategory | null) => ['catalog', 'search', query, category] as const,
   catalogProduct: (id: string) => ['catalog', 'product', id] as const,
   submission: (personalProductId: string) => ['submission', personalProductId] as const,
+  /** Everything about one product's public ratings, so a review write refreshes it all. */
+  reviews: (productId: string) => ['reviews', productId] as const,
+  myReview: (productId: string) => ['reviews', productId, 'mine'] as const,
+  ratingSummary: (productId: string) => ['reviews', productId, 'summary'] as const,
+  reviewList: (productId: string) => ['reviews', productId, 'list'] as const,
 };
 
 export const useLibrary = () => useQuery({ queryKey: keys.library, queryFn: () => listLibrary(requireSupabase()) });
@@ -75,4 +81,25 @@ export const useCatalogProduct = (id: string | undefined) =>
     queryFn: () => supabaseCatalog(requireSupabase()).getProduct(id ?? ''),
     enabled: Boolean(id),
     staleTime: 5 * 60_000,
+  });
+
+/** Your own public review of a catalogue product; nothing for products added manually. */
+export const useMyReview = (productId: string | null | undefined) =>
+  useQuery({
+    queryKey: keys.myReview(productId ?? ''),
+    queryFn: () => getMyReview(requireSupabase(), productId as string),
+    enabled: Boolean(productId),
+  });
+export const useRatingSummary = (productId: string | null | undefined) =>
+  useQuery({
+    queryKey: keys.ratingSummary(productId ?? ''),
+    queryFn: () => getRatingSummary(requireSupabase(), productId as string),
+    enabled: Boolean(productId),
+  });
+/** The three newest written reviews for the product page; "See all" pages through the rest. */
+export const useReviews = (productId: string | null | undefined, limit = 3) =>
+  useQuery({
+    queryKey: [...keys.reviewList(productId ?? ''), limit],
+    queryFn: () => listReviews(requireSupabase(), productId as string, limit),
+    enabled: Boolean(productId),
   });

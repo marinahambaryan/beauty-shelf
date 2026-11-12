@@ -42,6 +42,12 @@ export function toAppError(error: unknown): AppError {
   if (message === 'shelf_full') {
     return { kind: 'shelf_full', message: 'Your shelf holds up to 18 products. Remove or replace one first.' };
   }
+  if (message === 'display_name_required') {
+    return { kind: 'validation', message: 'Add the name your reviews show first.' };
+  }
+  if (/product_reviews_one_per_person/.test(message)) {
+    return { kind: 'conflict', message: 'You’ve already reviewed this product. Reload to edit your review.' };
+  }
   if (message === 'too_many_pending') {
     return { kind: 'validation', message: 'You have 20 products waiting for review. Try again once some are reviewed.' };
   }

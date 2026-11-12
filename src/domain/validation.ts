@@ -73,6 +73,13 @@ export const openedDateSchema = z
   .refine((v) => v === '' || v <= todayISO(), 'That date hasn’t happened yet.')
   .transform((v) => (v.length ? v : null));
 
+/** A public review's text: optional, up to 2,000 characters; blank means none. */
+export const reviewBodySchema = z
+  .string()
+  .trim()
+  .max(2000, 'Keep your review under 2,000 characters.')
+  .transform((v) => (v.length ? v : null));
+
 export const collectionNameSchema = z
   .string()
   .trim()

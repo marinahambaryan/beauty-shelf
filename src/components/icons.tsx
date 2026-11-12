@@ -23,7 +23,8 @@ export type IconName =
   | 'shelf'
   | 'up'
   | 'down'
-  | 'star';
+  | 'star'
+  | 'globe';
 
 /**
  * Line icons drawn on a 24-unit grid, matching the design canvas. Decorative: the
@@ -123,6 +124,11 @@ export function Icon({
           fill={filled ? color : 'none'}
           d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"
         />
+      ) : name === 'globe' ? (
+        <>
+          <Circle {...stroke} cx={12} cy={12} r={9} />
+          <Path {...stroke} d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" />
+        </>
       ) : null}
     </Svg>
   );

@@ -29,6 +29,8 @@ import {
 } from './collections';
 import { removePhotos } from './photos';
 import { keys } from './queries';
+import { deleteReview, saveReview, type MyReview } from './reviews';
+import { updateDisplayName } from './profile';
 import { sendToCatalogue } from './submissions';
 
 /** Anything that changes the library refreshes the lists, counts and shelf that show it. */
@@ -220,5 +222,40 @@ export function useSendToCatalogue(personalProductId: string) {
   return useMutation({
     mutationFn: ({ note }: { note: string | null }) => sendToCatalogue(requireSupabase(), { personalProductId, note }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.submission(personalProductId) }),
+  });
+}
+
+/**
+ * Posts or edits your public review. Sets the name reviews show first when you didn't
+ * have one, so posting is one step.
+ */
+export function useSaveReview() {
+  const queryClient = useQueryClient();
+  const userId = useUserId();
+  return useMutation({
+    mutationFn: async (input: {
+      productId: string;
+      rating: number;
+      body: string | null;
+      existing: Pick<MyReview, 'id' | 'version'> | null;
+      displayName?: string;
+    }) => {
+      const db = requireSupabase();
+      if (input.displayName) await updateDisplayName(db, userId, input.displayName);
+      await saveReview(db, input);
+    },
+    onSettled: (_d, _e, input) =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: keys.reviews(input.productId) }),
+        queryClient.invalidateQueries({ queryKey: keys.profile }),
+      ]),
+  });
+}
+
+export function useDeleteReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; productId: string }) => deleteReview(requireSupabase(), input.id),
+    onSettled: (_d, _e, input) => queryClient.invalidateQueries({ queryKey: keys.reviews(input.productId) }),
   });
 }
